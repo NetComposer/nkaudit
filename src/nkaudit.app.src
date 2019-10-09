@@ -1,0 +1,12 @@
+{application, nkaudit, [
+    {description, "NkAUDIR Framework"},
+    {vsn, "develop"},
+    {modules, []},
+    {registered, []},
+    {mod, {nkaudit_app, []}},
+    {applications, [
+        nkserver
+    ]},
+    {env, [
+    ]}
+]}.
