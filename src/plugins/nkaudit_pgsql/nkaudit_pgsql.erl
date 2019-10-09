@@ -20,9 +20,8 @@
 
 -module(nkaudit_pgsql).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
+-export([init/2, store/3, search/3, aggregate/3]).
 -export([get_pgsql_srv/1]).
--export([query/2, query/3]).
--export([init/2, store/3]).
 
 -define(LLOG(Type, Txt, Args), lager:Type("NkAUDIT PGSQL "++Txt, Args)).
 
@@ -73,18 +72,20 @@ create_database_query(postgresql) ->
             uid TEXT PRIMARY KEY NOT NULL,
             date TEXT NOT NULL,
             app TEXT NOT NULL,
+            namespace TEXT NOT NULL,
             \"group\" TEXT,
             type TEXT,
             level SMALLINT NOT NULL,
             trace TEXT,
-            id TEXT NOT NULL,
+            id TEXT,
             id2 TEXT,
             id3 TEXT,
             msg TEXT,
-            data JSONB
+            data JSONB,
+            path TEXT NOT NULL
         );
-        CREATE INDEX date_idx on audit (date, app, \"group\", type);
-        CREATE INDEX app_idx on audit (app, \"group\", type, date);
+        CREATE INDEX date_idx on audit (date, app, namespace, \"group\", type);
+        CREATE INDEX app_idx on audit (app, namespace, \"group\", type, date);
         CREATE INDEX data_idx on audit USING gin(data);
         COMMIT;
     ">>.
@@ -95,8 +96,10 @@ create_database_query(postgresql) ->
 store(SrvId, Audits, _Opts) ->
     Values = update_values(Audits, []),
     Query = [
-        <<"INSERT INTO audit (uid,date,app,\"group\",type,level,trace,id,id2,id3,msg,data) ">>,
-        <<"VALUES ">>, nklib_util:bjoin(Values), <<";">>
+        <<
+            "INSERT INTO audit "
+            "(uid,date,app,namespace,\"group\",type,level,trace,id,id2,id3,msg,data,path) "
+            "VALUES ">>, nklib_util:bjoin(Values), <<";">>
     ],
     case query(SrvId, Query) of
         {ok, _, SaveMeta} ->
@@ -104,6 +107,48 @@ store(SrvId, Audits, _Opts) ->
         {error, Error} ->
             {error, Error}
     end.
+
+
+search(SrvId, Spec, _Opts) ->
+    From = maps:get(from, Spec, 0),
+    Size = maps:get(size, Spec, 10),
+    Totals = maps:get(get_total, Spec, false),
+    SQLFilters = nkaudit_pgsql_sql:filters(Spec),
+    SQLSort = nkaudit_pgsql_sql:sort(Spec),
+
+    % We could use SELECT COUNT(*) OVER(),src,uid... but it doesn't work if no
+    % rows are returned
+
+    Query = [
+        case Totals of
+            true ->
+                [
+                    <<"SELECT COUNT(*) FROM audit">>,
+                    SQLFilters,
+                    <<";">>
+                ];
+            false ->
+                []
+        end,
+        nkaudit_pgsql_sql:select(Spec),
+        SQLFilters,
+        SQLSort,
+        <<" OFFSET ">>, to_bin(From), <<" LIMIT ">>, to_bin(Size),
+        <<";">>
+    ],
+    query(SrvId, Query, #{result_fun=> fun pgsql_audits/2}).
+
+
+%% @doc
+aggregate(SrvId, nkaudit_apps, Opts) ->
+    Namespace = maps:get(namespace, Opts, <<>>),
+    Deep = maps:get(deep, Opts, true),
+    Query = [
+        <<"SELECT \"app\", COUNT(\"app\") FROM audit">>,
+        <<" WHERE ">>, filter_path(Namespace, Deep),
+        <<" GROUP BY \"app\";">>
+    ],
+    query(SrvId, Query, #{result_fun=>fun pgsql_aggregate/2}).
 
 
 
@@ -144,6 +189,7 @@ update_values([Audit|Rest], Acc) ->
         uid := UID,
         date := Date,
         app := App,
+        namespace := Namespace,
         level := Level,
         msg := Msg,
         data := Data
@@ -154,10 +200,12 @@ update_values([Audit|Rest], Acc) ->
     Id = maps:get(id, Audit, null),
     Id2 = maps:get(id2, Audit, null),
     Id3 = maps:get(id3, Audit, null),
+    Path = make_rev_path(Namespace),
     Fields1 = [
         quote(UID),
         quote(Date),
         quote(App),
+        quote(Namespace),
         quote(Group),
         quote(Type),
         Level,
@@ -166,7 +214,8 @@ update_values([Audit|Rest], Acc) ->
         quote(Id2),
         quote(Id3),
         quote(Msg),
-        quote(Data)
+        quote(Data),
+        quote(Path)
     ],
     Fields2 = <<$(, (nklib_util:bjoin(Fields1))/binary, $)>>,
     update_values(Rest, [Fields2|Acc]).
@@ -175,3 +224,93 @@ update_values([Audit|Rest], Acc) ->
 %% @private
 quote(Term) ->
     nkpgsql_util:quote(Term).
+
+
+%% @private
+pgsql_audits(Result, Meta) ->
+    #{pgsql:=#{time:=Time}} = Meta,
+    {Rows, Meta2} = case Result of
+        [{{select, Size}, Rows0, _OpMeta}] ->
+            {Rows0, #{size=>Size, time=>Time}};
+        [{{select, 1}, [{Total}], _}, {{select, Size}, Rows0, _OpMeta}] ->
+            {Rows0, #{size=>Size, total=>Total, time=>Time}}
+    end,
+    Actors = lists:map(
+        fun
+            ({UID, Date, App, Ns, Group, Type, Level, Trace, Id, Id2, Id3, Msg}) ->
+                #{
+                    uid => UID,
+                    date => Date,
+                    app => App,
+                    namespace => Ns,
+                    group => Group,
+                    type => Type,
+                    level => Level,
+                    trace => Trace,
+                    id => Id,
+                    id2 => Id2,
+                    id3 => Id3,
+                    msg => Msg
+                };
+            ({UID, Date, App, Ns, Group, Type, Level, Trace, Id, Id2, Id3, Msg, {jsonb, Data}}) ->
+
+                #{
+                    uid => UID,
+                    date => Date,
+                    app => App,
+                    namespace => Ns,
+                    group => Group,
+                    type => Type,
+                    level => Level,
+                    trace => Trace,
+                    id => Id,
+                    id2 => Id2,
+                    id3 => Id3,
+                    msg => Msg,
+                    data => nklib_json:decode(Data)
+                }
+        end,
+        Rows),
+    {ok, Actors, Meta2}.
+
+
+%% @private
+pgsql_aggregate([{{select, _Size}, Rows, _OpMeta}], Meta) ->
+    case (catch maps:from_list(Rows)) of
+        {'EXIT', _} ->
+            {error, aggregation_invalid};
+        Map ->
+            {ok, Map, Meta}
+    end.
+
+
+make_rev_path(Namespace) ->
+    Parts = make_rev_parts(Namespace),
+    nklib_util:bjoin(Parts, $.).
+
+
+%% @private
+make_rev_parts(Namespace) ->
+    case to_bin(Namespace) of
+        <<>> ->
+            [];
+        Namespace2 ->
+            lists:reverse(binary:split(Namespace2, <<$.>>, [global]))
+    end.
+
+%% @private
+filter_path(<<>>, true) ->
+    [<<"TRUE">>];
+
+filter_path(Namespace, Deep) ->
+    Path = nkactor_lib:make_rev_path(Namespace),
+    case Deep of
+        true ->
+            [<<"(path LIKE ">>, quote(<<Path/binary, "%">>), <<")">>];
+        false ->
+            [<<"(path = ">>, quote(Path), <<")">>]
+    end.
+
+to_bin(Term) when is_binary(Term) -> Term;
+to_bin(Term) -> nklib_util:to_binary(Term).
+

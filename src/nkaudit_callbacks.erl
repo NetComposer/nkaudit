@@ -21,7 +21,7 @@
 %% @doc Default plugin callbacks
 -module(nkaudit_callbacks).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
--export([status/1, audit_store/3]).
+-export([status/1, audit_store/3, audit_search/3, audit_aggregate/3]).
 
 
 -include_lib("nkserver/include/nkserver.hrl").
@@ -41,6 +41,21 @@ status(_) -> continue.
 -spec audit_store(nkserver:id(), [nkaudit:audit()], nkaudit:store_opts()) ->
     ok | {error, term()}.
 
-
 audit_store(_SrvId, _Audits, _Opts) ->
+    {error, no_audit_store_backend}.
+
+
+%% @doc
+-spec audit_search(nkserver:id(), nkaudit_search:spec(), nkaudit_search:opts()) ->
+    {ok, [nkaudit:audit()], map()} | {error, term()}.
+
+audit_search(_SrvId, _Spec, _Opts) ->
+    {error, no_audit_store_backend}.
+
+
+%% @doc
+-spec audit_aggregate(nkserver:id(), nkaudit:agg_type(), nkaudit:agg_opts()) ->
+    {ok, [nkaudit:audit()], map()} | {error, term()}.
+
+audit_aggregate(_SrvId, _Spec, _Opts) ->
     {error, no_audit_store_backend}.

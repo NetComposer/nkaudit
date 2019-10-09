@@ -24,7 +24,7 @@
 
 
 -export([status/1]).
--export([audit_db_init/1, audit_store/3]).
+-export([audit_db_init/1, audit_store/3, audit_aggregate/3, audit_search/3]).
 
 -include_lib("nkserver/include/nkserver.hrl").
 
@@ -34,7 +34,7 @@ status(_) -> continue.
 
 
 %% ===================================================================
-%% Persistence callbacks
+%% Offered callbacks
 %% ===================================================================
 
 
@@ -49,6 +49,12 @@ audit_db_init(_SrvId) ->
     ok.
 
 
+
+%% ===================================================================
+%% Persistence callbacks
+%% ===================================================================
+
+
 %% @doc Must create a new audit on disk. Should fail if already present
 -spec audit_store(nkserver:id(), [nkaudit:audit()], nkaudit:store_opts()) ->
     {ok, Meta::map()} | {error, uniqueness_violation|term()} | continue().
@@ -57,32 +63,20 @@ audit_store(SrvId, Audits, Opts) ->
     call(SrvId, store, Audits, Opts).
 
 
+%% @doc
+-spec audit_search(nkserver:id(), nkaudit_search:spec(), nkaudit_search:opts()) ->
+    {ok, [nkaudit:audit()], map()} | {error, term()}.
 
-%%%% @doc
-%%-spec audit_db_search(id(), nkaudit_backend:search_type(), db_opts()) ->
-%%    {ok, [audit()], Meta::map()} | {error, term()} | continue().
-%%
-%%audit_db_search(SrvId, Type, Opts) ->
-%%    case nkaudit_pgsql:get_pgsql_srv(SrvId) of
-%%        undefined ->
-%%            continue;
-%%        PgSrvId ->
-%%            start_span(PgSrvId, <<"search">>, Opts),
-%%            Result = case nkaudit_pgsql_search:search(Type, Opts) of
-%%                {query, Query, Fun} ->
-%%                    Opts2 = #{result_fun=>Fun, nkaudit_params=>Opts},
-%%                    case nkaudit_pgsql:query(PgSrvId, Query, Opts2) of
-%%                        {ok, ActorList, Meta} ->
-%%                            parse_audits(ActorList, SrvId, Meta, Opts, []);
-%%                        {error, Error} ->
-%%                            {error, Error}
-%%                    end;
-%%                {error, Error} ->
-%%                    {error, Error}
-%%            end,
-%%            stop_span(),
-%%            reply(Result)
-%%    end.
+audit_search(SrvId, Spec, Opts) ->
+    call(SrvId, search, Spec, Opts).
+
+
+%% @doc
+-spec audit_aggregate(nkserver:id(), nkaudit:agg_type(), nkaudit:agg_opts()) ->
+    {ok, [nkaudit:audit()], map()} | {error, term()}.
+
+audit_aggregate(SrvId, Type, Opts) ->
+    call(SrvId, aggregate, Type, Opts).
 
 
 %% ===================================================================
@@ -98,8 +92,6 @@ call(SrvId, Op, Arg, Opts) ->
             Reply = nkaudit_pgsql:Op(PgSrvId, Arg, Opts),
             reply(Reply)
     end.
-
-
 
 
 %% @private

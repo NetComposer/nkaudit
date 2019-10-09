@@ -22,7 +22,8 @@
 %% @doc
 -module(nkaudit).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
--export([store/3, parse/1]).
+-export([store/3, get_apps/1, search/3]).
+-export([aggregate/3, parse/1]).
 
 -include_lib("nkserver/include/nkserver.hrl").
 
@@ -38,6 +39,7 @@
         uid := binary(),
         date := binary(),
         app := binary(),
+        namespace => binary(),
         group => binary(),
         type => binary(),
         level => 1..7 | level(),
@@ -51,6 +53,7 @@
 
 -type store_opts() :: #{}.
 
+-type agg_type() :: any().
 
 %% ===================================================================
 %% API
@@ -67,6 +70,32 @@ store(SrvId, Audits, Opts) ->
         {error, Error} ->
             {error, Error}
     end.
+
+
+%% @doc
+get_apps(SrvId) ->
+    aggregate(SrvId, nkaudit_apps, #{}).
+
+
+%% @doc Generic search
+-spec search(nkserver:id(), nkaudit_search:spec(), nkaudit_search:opts()) ->
+    {ok, [audit()], Meta::map()} | {error, term()}.
+
+search(SrvId, SearchSpec, SearchOpts) ->
+    case nkaudit_search:parse_spec(SearchSpec, SearchOpts) of
+        {ok, SearchSpec2} ->
+            ?CALL_SRV(SrvId, audit_search, [SrvId, SearchSpec2, SearchOpts]);
+        {error, Error} ->
+            {error, Error}
+    end.
+
+
+%% @doc
+-spec aggregate(nkserver:id(), agg_type(), map()) ->
+    {ok, [{binary(), integer()}], Meta::map()} | {error, term()}.
+
+aggregate(SrvId, AggType, Opts) ->
+    ?CALL_SRV(SrvId, audit_aggregate, [SrvId, AggType, Opts]).
 
 
 %% @doc
@@ -95,6 +124,7 @@ parse([Audit|Rest], Acc) ->
         uid => binary,
         date => binary,
         app => binary,
+        namespace => binary,
         group => binary,
         type => binary,
         level => [{integer, 1, 7}, {atom, [debug,info,notice,warning,error]}],
@@ -106,6 +136,7 @@ parse([Audit|Rest], Acc) ->
         data => map,
         '__mandatory' => [app],
         '__defaults' => #{
+            namespace => <<>>,
             level => debug,
             msg => <<>>,
             data => #{}
