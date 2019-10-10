@@ -21,7 +21,7 @@
 %% @doc Default callbacks for plugin definitions
 -module(nkaudit_plugin).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
--export([plugin_deps/0, plugin_start/3]).
+-export([plugin_deps/0, plugin_start/3, plugin_cache/3]).
 
 -include("nkaudit.hrl").
 -include_lib("nkserver/include/nkserver.hrl").
@@ -53,4 +53,17 @@ plugin_start(SrvId, _Config, _Service) ->
 			ok;
 		{error, Error} ->
 			{error, Error}
+	end.
+
+
+%% @doc
+plugin_cache(_Id, Config, _Service) ->
+	Syntax = #{audit_srv => atom},
+	case nklib_syntax:parse(Config, Syntax) of
+		{ok, #{audit_srv:=AuditSrv}, _} ->
+			{ok, #{
+				audit_srv => AuditSrv
+			}};
+		_ ->
+			ok
 	end.
