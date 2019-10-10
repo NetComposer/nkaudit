@@ -21,7 +21,7 @@
 -define(SRV, srv).
 
 %% @doc
--module(nkaudit_sample).
+-module(nkserver_audit_sample).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
 -export([insert/0, q1/0]).
 
@@ -31,7 +31,7 @@ insert() ->
         #{app=>app1, group=>group2, namespace=>"a.b", data=>#{b=>2}},
         #{app=>app2, group=>group2, namespace=>"a.b", level=>notice, data=>#{c=><<"c">>}}
     ],
-    nkaudit:store(?SRV, Audits, #{}).
+    nkserver_audit:store(?SRV, Audits, #{}).
 
 
 q1() ->
@@ -49,4 +49,4 @@ q1() ->
         },
         sort => [#{field=>date}, #{field=>app}, #{field=>"data.c", type=>integer}]
     },
-    nkaudit:search(?SRV, S, #{}).
+    nkserver_audit:search(?SRV, S, #{}).

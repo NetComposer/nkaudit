@@ -20,7 +20,7 @@
 
 
 %% @doc
--module(nkaudit).
+-module(nkserver_audit).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
 -export([store/3, get_apps/1, search/3]).
 -export([aggregate/3, parse/1]).
@@ -79,15 +79,15 @@ store(SrvId, Audits, Opts) ->
 
 %% @doc
 get_apps(SrvId) ->
-    aggregate(SrvId, nkaudit_apps, #{}).
+    aggregate(SrvId, nkserver_audit_apps, #{}).
 
 
 %% @doc Generic search
--spec search(nkserver:id(), nkaudit_search:spec(), nkaudit_search:opts()) ->
+-spec search(nkserver:id(), nkserver_audit_search:spec(), nkserver_audit_search:opts()) ->
     {ok, [audit()], Meta::map()} | {error, term()}.
 
 search(SrvId, SearchSpec, SearchOpts) ->
-    case nkaudit_search:parse_spec(SearchSpec, SearchOpts) of
+    case nkserver_audit_search:parse_spec(SearchSpec, SearchOpts) of
         {ok, SearchSpec2} ->
             ?CALL_SRV(SrvId, audit_search, [SrvId, SearchSpec2, SearchOpts]);
         {error, Error} ->

@@ -18,52 +18,44 @@
 %%
 %% -------------------------------------------------------------------
 
-%% @doc Default callbacks for plugin definitions
--module(nkaudit_plugin).
+%% @doc Default plugin callbacks
+-module(nkserver_audit_callbacks).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
--export([plugin_deps/0, plugin_start/3, plugin_cache/3]).
+-export([status/1, audit_store/3, audit_search/3, audit_aggregate/3]).
 
--include("nkaudit.hrl").
+
 -include_lib("nkserver/include/nkserver.hrl").
+-include("nkserver_audit.hrl").
+%-type continue() :: continue | {continue, list()}.
 
 
 %% ===================================================================
-%% Plugin Callbacks
+%% Status Callbacks
 %% ===================================================================
 
 
-%% @doc 
-plugin_deps() ->
-	[].
+status(_) -> continue.
 
 
 %% @doc
-plugin_start(SrvId, _Config, _Service) ->
-	lager:info("NkAUDIT starting sender (~s)", [SrvId]),
-	Spec = #{
-		id => SrvId,
-		start => {nkaudit_sender, start_link, [SrvId]},
-		restart => permanent,
-		shutdown => 5000,
-		type => worker,
-		modules => [nkaudit_sender]
-	},
-	case nkserver_workers_sup:update_child2(SrvId, Spec, #{}) of
-		{ok, _, _Pid} ->
-			ok;
-		{error, Error} ->
-			{error, Error}
-	end.
+-spec audit_store(nkserver:id(), [nkserver_audit:audit()], nkserver_audit:store_opts()) ->
+    ok | {error, term()}.
+
+audit_store(_SrvId, _Audits, _Opts) ->
+    {error, no_audit_store_backend}.
 
 
 %% @doc
-plugin_cache(_Id, Config, _Service) ->
-	Syntax = #{audit_srv => atom},
-	case nklib_syntax:parse(Config, Syntax) of
-		{ok, #{audit_srv:=AuditSrv}, _} ->
-			{ok, #{
-				audit_srv => AuditSrv
-			}};
-		_ ->
-			ok
-	end.
+-spec audit_search(nkserver:id(), nkserver_audit_search:spec(), nkserver_audit_search:opts()) ->
+    {ok, [nkserver_audit:audit()], map()} | {error, term()}.
+
+audit_search(_SrvId, _Spec, _Opts) ->
+    {error, no_audit_store_backend}.
+
+
+%% @doc
+-spec audit_aggregate(nkserver:id(), nkserver_audit:agg_type(), nkserver_audit:agg_opts()) ->
+    {ok, [nkserver_audit:audit()], map()} | {error, term()}.
+
+audit_aggregate(_SrvId, _Spec, _Opts) ->
+    {error, no_audit_store_backend}.

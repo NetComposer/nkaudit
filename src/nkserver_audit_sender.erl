@@ -19,7 +19,7 @@
 %% -------------------------------------------------------------------
 
 
--module(nkaudit_sender).
+-module(nkserver_audit_sender).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
 -behaviour(gen_server).
 
@@ -45,7 +45,7 @@ start_link(SrvId) ->
 %% @doc
 store(SrvId, Audit) when is_map(Audit) ->
     Pid = nklib_util:do_config_get({?MODULE, SrvId}),
-    case nkaudit:parse(Audit) of
+    case nkserver_audit:parse(Audit) of
         {ok, [Audit2]} ->
             gen_server:cast(Pid, {new_audit, Audit2});
         {error, Error} ->
@@ -61,7 +61,7 @@ get_total(SrvId) ->
 
 %% @doc
 pause(Boolean) ->
-    nklib_util:do_config_put(nkaudit_pause_sender, Boolean).
+    nklib_util:do_config_put(nkserver_audit_pause_sender, Boolean).
 
 
 %% ===================================================================
@@ -71,7 +71,7 @@ pause(Boolean) ->
 -record(state, {
     srv :: nkserver:id(),
     interval :: integer() | undefined,
-    audits = [] :: [nkaudit:audit()],
+    audits = [] :: [nkserver_audit:audit()],
     total = 0 :: integer()
 }).
 
@@ -82,7 +82,7 @@ init([SrvId]) ->
     pause(false),
     Time = 5000,
     State = #state{srv=SrvId, interval = Time},
-    lager:notice("Starting NkAUDIT Sender (srv:~s, interval:~p)", [SrvId, Time]),
+    lager:notice("Starting NkSERVER AUDIT Sender (srv:~s, interval:~p)", [SrvId, Time]),
     self() ! send_audits,
     {ok, State}.
 
@@ -111,7 +111,7 @@ handle_info(send_audits, #state{audits=[], interval=Time}=State) ->
     {noreply, State};
 
 handle_info(send_audits, #state{interval=Time, total=Total}=State) ->
-    State2 = case nklib_util:do_config_get(nkaudit_pause_sender, false) of
+    State2 = case nklib_util:do_config_get(nkserver_audit_pause_sender, false) of
         true ->
             {message_queue_len, Len} = process_info(self(), message_queue_len),
             lager:error("NKLOG SKIPING SENDING SPANS ~p (~p)", [Len, Total]),

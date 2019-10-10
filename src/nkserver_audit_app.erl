@@ -18,24 +18,24 @@
 %%
 %% -------------------------------------------------------------------
 
-%% @doc NkAUDIT Application Module
--module(nkaudit_app).
+%% @doc NkSERVER AUDIT Application Module
+-module(nkserver_audit_app).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
 -behaviour(application).
 
 -export([start/0, start/1, start/2, stop/1]).
 -export([get/1, get/2, put/2, del/1]).
 
--include("nkaudit.hrl").
+-include("nkserver_audit.hrl").
 
--define(APP, nkaudit).
+-define(APP, nkserver_audit).
 -compile({no_auto_import, [get/1, put/2]}).
 
 %% ===================================================================
 %% Private
 %% ===================================================================
 
-%% @doc Starts NkAUDIT stand alone.
+%% @doc Starts NkSERVER AUDIT stand alone.
 -spec start() -> 
     ok | {error, Reason::term()}.
 
@@ -43,7 +43,7 @@ start() ->
     start(permanent).
 
 
-%% @doc Starts NkAUDIT stand alone.
+%% @doc Starts NkSERVER AUDIT stand alone.
 -spec start(permanent|transient|temporary) -> 
     ok | {error, Reason::term()}.
 
@@ -62,9 +62,9 @@ start(_Type, _Args) ->
     },
     case nklib_config:load_env(?APP, Syntax) of
         {ok, _} ->
-            {ok, Pid} = nkaudit_sup:start_link(),
-            {ok, Vsn} = application:get_key(nkaudit, vsn),
-            lager:info("NkAUDIT v~s has started.", [Vsn]),
+            {ok, Pid} = nkserver_audit_sup:start_link(),
+            {ok, Vsn} = application:get_key(nkserver_audit, vsn),
+            lager:info("NkSERVER AUDIT v~s has started.", [Vsn]),
             {ok, Pid};
         {error, Error} ->
             lager:error("Error parsing config: ~p", [Error]),

@@ -19,47 +19,51 @@
 %% -------------------------------------------------------------------
 
 %% @doc Default callbacks for plugin definitions
--module(nkaudit_pgsql_plugin).
+-module(nkserver_audit_plugin).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
--export([plugin_deps/0, plugin_config/3, plugin_cache/3, plugin_start/3]).
+-export([plugin_deps/0, plugin_start/3, plugin_cache/3]).
 
--include_lib("nkaudit/include/nkaudit.hrl").
+-include("nkserver_audit.hrl").
 -include_lib("nkserver/include/nkserver.hrl").
+
 
 %% ===================================================================
 %% Plugin Callbacks
 %% ===================================================================
 
 
-%% @doc
+%% @doc 
 plugin_deps() ->
-	[nkaudit].
-
-
-%% @doc
-plugin_config(_SrvId, Config, #{class:=nkaudit}) ->
-	Syntax = #{
-		pgsql_service => atom,
-		debug => boolean
-	},
-	nkserver_util:parse_config(Config, Syntax).
-
-
-%% @doc
-plugin_cache(_SrvId, Config, _Service) ->
-	PgsqlService = maps:get(pgsql_service, Config, undefined),
-	Debug = maps:get(debug, Config, false),
-	{ok, #{
-		pgsql_service => PgsqlService,
-		debug => Debug
-	}}.
+	[].
 
 
 %% @doc
 plugin_start(SrvId, _Config, _Service) ->
-	case nkaudit_pgsql:get_pgsql_srv(SrvId) of
-		undefined ->
+	lager:info("NkSERVER AUDIT starting sender (~s)", [SrvId]),
+	Spec = #{
+		id => SrvId,
+		start => {nkserver_audit_sender, start_link, [SrvId]},
+		restart => permanent,
+		shutdown => 5000,
+		type => worker,
+		modules => [nkserver_audit_sender]
+	},
+	case nkserver_workers_sup:update_child2(SrvId, Spec, #{}) of
+		{ok, _, _Pid} ->
 			ok;
-		PgSrvId ->
-			nkaudit_pgsql:init(PgSrvId, 10)
+		{error, Error} ->
+			{error, Error}
+	end.
+
+
+%% @doc
+plugin_cache(_Id, Config, _Service) ->
+	Syntax = #{audit_srv => atom},
+	case nklib_syntax:parse(Config, Syntax) of
+		{ok, #{audit_srv:=AuditSrv}, _} ->
+			{ok, #{
+				audit_srv => AuditSrv
+			}};
+		_ ->
+			ok
 	end.

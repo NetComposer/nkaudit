@@ -20,7 +20,7 @@
 
 
 %% @doc SQL utilities for stores to use
--module(nkaudit_pgsql_sql).
+-module(nkserver_audit_pgsql_sql).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
 -export([select/1, filters/1, sort/1, field_name/2]).
 -import(nkactor_store_pgsql, [quote/1, filter_path/2]).

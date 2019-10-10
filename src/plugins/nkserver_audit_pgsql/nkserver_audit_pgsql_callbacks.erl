@@ -19,7 +19,7 @@
 %% -------------------------------------------------------------------
 
 %% @doc Default plugin callbacks
--module(nkaudit_pgsql_callbacks).
+-module(nkserver_audit_pgsql_callbacks).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
 
 
@@ -56,7 +56,7 @@ audit_db_init(_SrvId) ->
 
 
 %% @doc Must create a new audit on disk. Should fail if already present
--spec audit_store(nkserver:id(), [nkaudit:audit()], nkaudit:store_opts()) ->
+-spec audit_store(nkserver:id(), [nkserver_audit:audit()], nkserver_audit:store_opts()) ->
     {ok, Meta::map()} | {error, uniqueness_violation|term()} | continue().
 
 audit_store(SrvId, Audits, Opts) ->
@@ -64,16 +64,16 @@ audit_store(SrvId, Audits, Opts) ->
 
 
 %% @doc
--spec audit_search(nkserver:id(), nkaudit_search:spec(), nkaudit_search:opts()) ->
-    {ok, [nkaudit:audit()], map()} | {error, term()}.
+-spec audit_search(nkserver:id(), nkserver_audit_search:spec(), nkserver_audit_search:opts()) ->
+    {ok, [nkserver_audit:audit()], map()} | {error, term()}.
 
 audit_search(SrvId, Spec, Opts) ->
     call(SrvId, search, Spec, Opts).
 
 
 %% @doc
--spec audit_aggregate(nkserver:id(), nkaudit:agg_type(), nkaudit:agg_opts()) ->
-    {ok, [nkaudit:audit()], map()} | {error, term()}.
+-spec audit_aggregate(nkserver:id(), nkserver_audit:agg_type(), nkserver_audit:agg_opts()) ->
+    {ok, [nkserver_audit:audit()], map()} | {error, term()}.
 
 audit_aggregate(SrvId, Type, Opts) ->
     call(SrvId, aggregate, Type, Opts).
@@ -85,11 +85,11 @@ audit_aggregate(SrvId, Type, Opts) ->
 
 %% @private
 call(SrvId, Op, Arg, Opts) ->
-    case nkaudit_pgsql:get_pgsql_srv(SrvId) of
+    case nkserver_audit_pgsql:get_pgsql_srv(SrvId) of
         undefined ->
             continue;
         PgSrvId ->
-            Reply = nkaudit_pgsql:Op(PgSrvId, Arg, Opts),
+            Reply = nkserver_audit_pgsql:Op(PgSrvId, Arg, Opts),
             reply(Reply)
     end.
 

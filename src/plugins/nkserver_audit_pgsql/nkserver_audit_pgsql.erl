@@ -18,12 +18,12 @@
 %%
 %% -------------------------------------------------------------------
 
--module(nkaudit_pgsql).
+-module(nkserver_audit_pgsql).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
 -export([init/2, store/3, search/3, aggregate/3]).
 -export([get_pgsql_srv/1]).
 
--define(LLOG(Type, Txt, Args), lager:Type("NkAUDIT PGSQL "++Txt, Args)).
+-define(LLOG(Type, Txt, Args), lager:Type("NkSERVER AUDIT PGSQL "++Txt, Args)).
 
 
 %% ===================================================================
@@ -44,16 +44,16 @@ init(SrvId, Tries) when Tries > 0 ->
             ok;
         {error, field_unknown} ->
             Flavour = nkserver:get_cached_config(SrvId, nkpgsql, flavour),
-            lager:warning("NkAUDIT: database not found: Creating it (~p)", [Flavour]),
+            lager:warning("NkSERVER AUDIT: database not found: Creating it (~p)", [Flavour]),
             case nkpgsql:query(SrvId, create_database_query(Flavour)) of
                 {ok, _, _} ->
                     ok;
                 {error, Error} ->
-                    lager:error("NkAUDIT: Could not create database: ~p", [Error]),
+                    lager:error("NkSERVER AUDIT: Could not create database: ~p", [Error]),
                     {error, Error}
             end;
         {error, Error} ->
-            lager:warning("NkAUDIT: could not create database: ~p (~p tries left)", [Error, Tries]),
+            lager:warning("NkSERVER AUDIT: could not create database: ~p (~p tries left)", [Error, Tries]),
             timer:sleep(1000),
             init(SrvId, Tries-1)
     end;
@@ -113,8 +113,8 @@ search(SrvId, Spec, _Opts) ->
     From = maps:get(from, Spec, 0),
     Size = maps:get(size, Spec, 10),
     Totals = maps:get(get_total, Spec, false),
-    SQLFilters = nkaudit_pgsql_sql:filters(Spec),
-    SQLSort = nkaudit_pgsql_sql:sort(Spec),
+    SQLFilters = nkserver_audit_pgsql_sql:filters(Spec),
+    SQLSort = nkserver_audit_pgsql_sql:sort(Spec),
 
     % We could use SELECT COUNT(*) OVER(),src,uid... but it doesn't work if no
     % rows are returned
@@ -130,7 +130,7 @@ search(SrvId, Spec, _Opts) ->
             false ->
                 []
         end,
-        nkaudit_pgsql_sql:select(Spec),
+        nkserver_audit_pgsql_sql:select(Spec),
         SQLFilters,
         SQLSort,
         <<" OFFSET ">>, to_bin(From), <<" LIMIT ">>, to_bin(Size),
@@ -140,7 +140,7 @@ search(SrvId, Spec, _Opts) ->
 
 
 %% @doc
-aggregate(SrvId, nkaudit_apps, Opts) ->
+aggregate(SrvId, nkserver_audit_apps, Opts) ->
     Namespace = maps:get(namespace, Opts, <<>>),
     Deep = maps:get(deep, Opts, true),
     Query = [
@@ -158,7 +158,7 @@ aggregate(SrvId, nkaudit_apps, Opts) ->
 
 %% @doc
 get_pgsql_srv(ActorSrvId) ->
-    nkserver:get_cached_config(ActorSrvId, nkaudit_pgsql, pgsql_service).
+    nkserver:get_cached_config(ActorSrvId, nkserver_audit_pgsql, pgsql_service).
 
 
 %% @doc Performs a query. Must use the PgSQL service

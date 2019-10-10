@@ -19,12 +19,12 @@
 %% -------------------------------------------------------------------
 
 %% @doc Actor Search
--module(nkaudit_search).
+-module(nkserver_audit_search).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
 -export([parse_spec/2]).
 -export_type([spec/0, opts/0, filter/0, sort_spec/0]).
 
--include("nkaudit.hrl").
+-include("nkserver_audit.hrl").
 
 
 
@@ -35,7 +35,7 @@
 
 -type spec() ::
 #{
-    namespace => nkaudit:namespace(),
+    namespace => nkserver_audit:namespace(),
     deep => boolean(),
     from => pos_integer(),
     size => pos_integer(),

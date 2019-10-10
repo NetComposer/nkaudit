@@ -19,13 +19,13 @@
 %% -------------------------------------------------------------------
 
 %% @doc Main supervisor
--module(nkaudit_sup).
+-module(nkserver_audit_sup).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
 -behaviour(supervisor).
 
 -export([init/1, start_link/0]).
 
--include("nkaudit.hrl").
+-include("nkserver_audit.hrl").
 
 %% @private
 start_link() ->

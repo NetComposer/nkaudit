@@ -18,44 +18,48 @@
 %%
 %% -------------------------------------------------------------------
 
-%% @doc Default plugin callbacks
--module(nkaudit_callbacks).
+%% @doc Default callbacks for plugin definitions
+-module(nkserver_audit_pgsql_plugin).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
--export([status/1, audit_store/3, audit_search/3, audit_aggregate/3]).
+-export([plugin_deps/0, plugin_config/3, plugin_cache/3, plugin_start/3]).
 
-
+-include_lib("nkserver_audit/include/nkserver_audit.hrl").
 -include_lib("nkserver/include/nkserver.hrl").
--include("nkaudit.hrl").
-%-type continue() :: continue | {continue, list()}.
-
 
 %% ===================================================================
-%% Status Callbacks
+%% Plugin Callbacks
 %% ===================================================================
 
 
-status(_) -> continue.
+%% @doc
+plugin_deps() ->
+	[nkserver_audit].
 
 
 %% @doc
--spec audit_store(nkserver:id(), [nkaudit:audit()], nkaudit:store_opts()) ->
-    ok | {error, term()}.
-
-audit_store(_SrvId, _Audits, _Opts) ->
-    {error, no_audit_store_backend}.
-
-
-%% @doc
--spec audit_search(nkserver:id(), nkaudit_search:spec(), nkaudit_search:opts()) ->
-    {ok, [nkaudit:audit()], map()} | {error, term()}.
-
-audit_search(_SrvId, _Spec, _Opts) ->
-    {error, no_audit_store_backend}.
+plugin_config(_SrvId, Config, #{class:=nkserver_audit}) ->
+	Syntax = #{
+		pgsql_service => atom,
+		debug => boolean
+	},
+	nkserver_util:parse_config(Config, Syntax).
 
 
 %% @doc
--spec audit_aggregate(nkserver:id(), nkaudit:agg_type(), nkaudit:agg_opts()) ->
-    {ok, [nkaudit:audit()], map()} | {error, term()}.
+plugin_cache(_SrvId, Config, _Service) ->
+	PgsqlService = maps:get(pgsql_service, Config, undefined),
+	Debug = maps:get(debug, Config, false),
+	{ok, #{
+		pgsql_service => PgsqlService,
+		debug => Debug
+	}}.
 
-audit_aggregate(_SrvId, _Spec, _Opts) ->
-    {error, no_audit_store_backend}.
+
+%% @doc
+plugin_start(SrvId, _Config, _Service) ->
+	case nkserver_audit_pgsql:get_pgsql_srv(SrvId) of
+		undefined ->
+			ok;
+		PgSrvId ->
+			nkserver_audit_pgsql:init(PgSrvId, 10)
+	end.

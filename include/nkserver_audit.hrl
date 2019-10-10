@@ -1,5 +1,5 @@
--ifndef(NKAUDIT_HRL).
--define(NKAUDIT_HRL, 1).
+-ifndef(NKSERVER_AUDIT_HRL).
+-define(NKSERVER_AUDIT_HRL, 1).
 
 %% ===================================================================
 %% Defines

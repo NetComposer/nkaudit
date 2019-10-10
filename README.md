@@ -1,5 +1,5 @@
-# NkAUDIT
+# NkSERVER AUDIT
 
 # Introduction
 
-NkAUDIT is an Erlang application to produce audit reports on databases
+NkSERVER AUDIT is an Erlang application to produce audit reports on databases
