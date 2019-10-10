@@ -1,4 +1,4 @@
-APP = nkaudit
+APP = nkserver_audit
 REBAR = rebar3
 PRE1 = ERL_AFLAGS="-kernel net_ticktime 20"
 

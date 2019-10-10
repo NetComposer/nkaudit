@@ -1,9 +1,9 @@
-{application, nkaudit, [
-    {description, "NkAUDIR Framework"},
+{application, nkserver_audit, [
+    {description, "NkSERVER AUDIT Framework"},
     {vsn, "develop"},
     {modules, []},
     {registered, []},
-    {mod, {nkaudit_app, []}},
+    {mod, {nkserver_audit_app, []}},
     {applications, [
         nkserver
     ]},
