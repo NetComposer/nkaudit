@@ -66,7 +66,12 @@
 store(SrvId, Audits, Opts) ->
     case parse(Audits) of
         {ok, Audits2} ->
-            ?CALL_SRV(SrvId, audit_store, [SrvId, Audits2, Opts]);
+            case ?CALL_SRV(SrvId, audit_store, [SrvId, Audits2, Opts]) of
+                {ok, _Meta} ->
+                    ok;
+                {error, Error} ->
+                    {error, Error}
+            end;
         {error, Error} ->
             {error, Error}
     end.

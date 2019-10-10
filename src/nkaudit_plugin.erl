@@ -21,8 +21,7 @@
 %% @doc Default callbacks for plugin definitions
 -module(nkaudit_plugin).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
--export([plugin_deps/0]).
-
+-export([plugin_deps/0, plugin_start/3]).
 
 -include("nkaudit.hrl").
 -include_lib("nkserver/include/nkserver.hrl").
@@ -37,3 +36,21 @@
 plugin_deps() ->
 	[].
 
+
+%% @doc
+plugin_start(SrvId, _Config, _Service) ->
+	lager:info("NkAUDIT starting sender (~s)", [SrvId]),
+	Spec = #{
+		id => SrvId,
+		start => {nkaudit_sender, start_link, [SrvId]},
+		restart => permanent,
+		shutdown => 5000,
+		type => worker,
+		modules => [nkaudit_sender]
+	},
+	case nkserver_workers_sup:update_child2(SrvId, Spec, #{}) of
+		{ok, _, _Pid} ->
+			ok;
+		{error, Error} ->
+			{error, Error}
+	end.
