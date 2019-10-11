@@ -39,20 +39,26 @@ plugin_deps() ->
 
 %% @doc
 plugin_start(SrvId, _Config, _Service) ->
-	lager:info("NkSERVER AUDIT starting sender (~s)", [SrvId]),
-	Spec = #{
-		id => SrvId,
-		start => {nkserver_audit_sender, start_link, [SrvId]},
-		restart => permanent,
-		shutdown => 5000,
-		type => worker,
-		modules => [nkserver_audit_sender]
-	},
-	case nkserver_workers_sup:update_child2(SrvId, Spec, #{}) of
-		{ok, _, _Pid} ->
-			ok;
-		{error, Error} ->
-			{error, Error}
+	case nkserver_audit_app:get(activate) of
+		true ->
+			lager:info("NkSERVER AUDIT starting sender (~s)", [SrvId]),
+			Spec = #{
+				id => SrvId,
+				start => {nkserver_audit_sender, start_link, [SrvId]},
+				restart => permanent,
+				shutdown => 5000,
+				type => worker,
+				modules => [nkserver_audit_sender]
+			},
+			case nkserver_workers_sup:update_child2(SrvId, Spec, #{}) of
+				{ok, _, _Pid} ->
+					ok;
+				{error, Error} ->
+					{error, Error}
+			end;
+		false ->
+			lager:info("NkSERVER AUDIT not activated (~s)", [SrvId]),
+			ok
 	end.
 
 
@@ -61,9 +67,12 @@ plugin_cache(_Id, Config, _Service) ->
 	Syntax = #{audit_srv => atom},
 	case nklib_syntax:parse(Config, Syntax) of
 		{ok, #{audit_srv:=AuditSrv}, _} ->
-			{ok, #{
-				audit_srv => AuditSrv
-			}};
+			case nkserver_audit_app:get(activate) of
+				true ->
+					{ok, #{audit_srv => AuditSrv}};
+				false ->
+					ok
+			end;
 		_ ->
 			ok
 	end.

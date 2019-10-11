@@ -59,6 +59,8 @@ start(Type) ->
 %% @doc
 start(_Type, _Args) ->
     Syntax = #{
+        activate => boolean,
+        '__defaults' => #{activate => boolean}
     },
     case nklib_config:load_env(?APP, Syntax) of
         {ok, _} ->
