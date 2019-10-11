@@ -22,7 +22,7 @@
 %% @doc
 -module(nkserver_audit).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
--export([store/3, get_apps/1, search/3]).
+-export([store/2, store/3, get_apps/1, search/3]).
 -export([aggregate/3, parse/1]).
 
 -include_lib("nkserver/include/nkserver.hrl").
@@ -58,6 +58,14 @@
 %% ===================================================================
 %% API
 %% ===================================================================
+
+%% @doc
+-spec store(nkserver:id(), audit()|[audit()]) ->
+    ok | {error, term()}.
+
+store(SrvId, Audits) ->
+    store(SrvId, Audits, #{}).
+
 
 %% @doc
 -spec store(nkserver:id(), audit()|[audit()], store_opts()) ->
@@ -114,7 +122,6 @@ parse(Audits) when is_list(Audits) ->
     parse(Audits, []).
 
 
-
 %% ===================================================================
 %% Internal
 %% ===================================================================
@@ -142,7 +149,7 @@ parse([Audit|Rest], Acc) ->
         '__mandatory' => [app],
         '__defaults' => #{
             namespace => <<>>,
-            level => debug,
+            level => 2,
             msg => <<>>,
             data => #{}
         }
