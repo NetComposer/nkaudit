@@ -28,7 +28,6 @@
 
 -include_lib("nkserver/include/nkserver.hrl").
 
-status({pgsql_error, Error}) -> {"PgSQL Error: ~p", [Error]};
 status(_) -> continue.
 
 
