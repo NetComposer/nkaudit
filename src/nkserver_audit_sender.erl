@@ -23,7 +23,7 @@
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
 -behaviour(gen_server).
 
--export([store/2, pause/1, get_total/1]).
+-export([store/2, do_store/2, pause/1, get_total/1]).
 -export([start_link/1]).
 -export([init/1, terminate/2, code_change/3, handle_call/3, handle_cast/2,
     handle_info/2]).
@@ -44,13 +44,18 @@ start_link(SrvId) ->
 
 %% @doc
 store(SrvId, Audit) when is_map(Audit) ->
-    Pid = nklib_util:do_config_get({?MODULE, SrvId}),
     case nkserver_audit:parse(Audit) of
         {ok, [Audit2]} ->
-            gen_server:cast(Pid, {new_audit, Audit2});
+            do_store(SrvId, Audit2);
         {error, Error} ->
             {error, Error}
     end.
+
+
+%% @doc
+do_store(SrvId, Audit) when is_map(Audit) ->
+    Pid = nklib_util:do_config_get({?MODULE, SrvId}),
+    gen_server:cast(Pid, {new_audit, Audit}).
 
 
 %% @doc
