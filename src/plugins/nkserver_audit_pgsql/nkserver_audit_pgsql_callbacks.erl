@@ -56,7 +56,7 @@ audit_db_init(_SrvId) ->
 
 %% @doc Must create a new audit on disk. Should fail if already present
 -spec audit_store(nkserver:id(), [nkserver_audit:audit()], nkserver_audit:store_opts()) ->
-    {ok, Meta::map()} | {error, uniqueness_violation|term()} | continue().
+    {ok, Meta::map()} | {error, term()} | continue().
 
 audit_store(SrvId, Audits, Opts) ->
     call(SrvId, store, Audits, Opts).
