@@ -62,7 +62,6 @@ start(_Type, _Args) ->
         activate => boolean,
         '__defaults' => #{activate => false}
     },
-    lager:error("NKLOG ENV ~p", [application:get_all_env(?APP)]),
     case nklib_config:load_env(?APP, Syntax) of
         {ok, _} ->
             {ok, Pid} = nkserver_audit_sup:start_link(),
