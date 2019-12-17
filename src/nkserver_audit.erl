@@ -44,11 +44,9 @@
         type => binary(),
         level => 1..7 | level(),
         trace => binary(),
-        id => binary(),
-        id2 => binary(),
-        id3 => binary(),
         msg => binary(),
-        data => map()
+        data => map(),
+        metadata => map()
 }.
 
 -type store_opts() :: #{}.
@@ -146,12 +144,14 @@ parse([Audit|Rest], Acc) ->
         id3 => binary,
         msg => binary,
         data => map,
+        metadata => map,
         '__mandatory' => [app],
         '__defaults' => #{
             namespace => <<>>,
             level => 2,
             msg => <<>>,
-            data => #{}
+            data => #{},
+            metadata => #{}
         }
     },
     case nklib_syntax:parse(Audit, Syntax) of

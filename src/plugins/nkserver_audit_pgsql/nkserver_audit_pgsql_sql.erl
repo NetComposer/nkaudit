@@ -34,10 +34,10 @@
 %% @private
 select(Params) ->
     [
-        <<"SELECT uid,date,app,namespace,\"group\",type,level,trace,id,id2,id3,msg">>,
+        <<"SELECT uid,date,app,namespace,\"group\",type,level,trace,msg">>,
         case maps:get(get_data, Params, false) of
             true ->
-                <<",data">>;
+                <<",data,metadata">>;
             false ->
                 []
         end,

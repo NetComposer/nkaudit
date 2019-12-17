@@ -77,16 +77,15 @@ create_database_query(postgresql) ->
             type TEXT,
             level SMALLINT NOT NULL,
             trace TEXT,
-            id TEXT,
-            id2 TEXT,
-            id3 TEXT,
             msg TEXT,
             data JSONB,
+            metadata JSONB,
             path TEXT NOT NULL
         );
         CREATE INDEX date_idx on audit (date, app, namespace, \"group\", type);
         CREATE INDEX app_idx on audit (app, namespace, \"group\", type, date);
         CREATE INDEX data_idx on audit USING gin(data);
+        CREATE INDEX metadata_idx on audit USING gin(metadata);
         COMMIT;
     ">>.
 
@@ -98,7 +97,7 @@ store(SrvId, Audits, _Opts) ->
     Query = [
         <<
             "INSERT INTO audit "
-            "(uid,date,app,namespace,\"group\",type,level,trace,id,id2,id3,msg,data,path) "
+            "(uid,date,app,namespace,\"group\",type,level,trace,msg,data,metadata,path) "
             "VALUES ">>, nklib_util:bjoin(Values), <<";">>
     ],
     case query(SrvId, Query) of
@@ -197,10 +196,8 @@ update_values([Audit|Rest], Acc) ->
     Group = maps:get(group, Audit, null),
     Type = maps:get(type, Audit, null),
     Trace = maps:get(trace, Audit, null),
-    Id = maps:get(id, Audit, null),
-    Id2 = maps:get(id2, Audit, null),
-    Id3 = maps:get(id3, Audit, null),
     Path = make_rev_path(Namespace),
+    Metadata = maps:get(metadata, Audit, #{}),
     Fields1 = [
         quote(UID),
         quote(Date),
@@ -210,11 +207,9 @@ update_values([Audit|Rest], Acc) ->
         quote(Type),
         Level,
         quote(Trace),
-        quote(Id),
-        quote(Id2),
-        quote(Id3),
         quote(Msg),
         quote(Data),
+        quote(Metadata),
         quote(Path)
     ],
     Fields2 = <<$(, (nklib_util:bjoin(Fields1))/binary, $)>>,
@@ -237,7 +232,7 @@ pgsql_audits(Result, Meta) ->
     end,
     Actors = lists:map(
         fun
-            ({UID, Date, App, Ns, Group, Type, Level, Trace, Id, Id2, Id3, Msg}) ->
+            ({UID, Date, App, Ns, Group, Type, Level, Trace, Msg}) ->
                 #{
                     uid => UID,
                     date => Date,
@@ -247,12 +242,9 @@ pgsql_audits(Result, Meta) ->
                     type => Type,
                     level => Level,
                     trace => Trace,
-                    id => Id,
-                    id2 => Id2,
-                    id3 => Id3,
                     msg => Msg
                 };
-            ({UID, Date, App, Ns, Group, Type, Level, Trace, Id, Id2, Id3, Msg, {jsonb, Data}}) ->
+            ({UID, Date, App, Ns, Group, Type, Level, Trace, Msg, {jsonb, Data}, {jsonb, Meta}}) ->
 
                 #{
                     uid => UID,
@@ -263,11 +255,9 @@ pgsql_audits(Result, Meta) ->
                     type => Type,
                     level => Level,
                     trace => Trace,
-                    id => Id,
-                    id2 => Id2,
-                    id3 => Id3,
                     msg => Msg,
-                    data => nklib_json:decode(Data)
+                    data => nklib_json:decode(Data),
+                    metadata => nklib_json:decode(Meta)
                 }
         end,
         Rows),

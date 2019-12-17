@@ -120,12 +120,12 @@ handle_info(send_audits, #state{interval=Time, total=Total}=State) ->
         true ->
             {message_queue_len, Len} = process_info(self(), message_queue_len),
             lager:error("NKLOG SKIPING SENDING SPANS ~p (~p)", [Len, Total]),
-            State;
+            State#state{audits = [], total = 0};
         _ ->
             do_send_audits(State)
     end,
     erlang:send_after(Time, self(), send_audits),
-    {noreply, State2#state{audits=[]}};
+    {noreply, State2};
 
 handle_info(Msg, State) ->
     lager:error("Received unexpected info at ~p: ~p", [?MODULE, Msg]),
