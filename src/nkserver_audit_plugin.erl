@@ -21,7 +21,7 @@
 %% @doc Default callbacks for plugin definitions
 -module(nkserver_audit_plugin).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
--export([plugin_deps/0, plugin_start/3, plugin_cache/3]).
+-export([plugin_deps/0, plugin_start/3]).
 
 -include("nkserver_audit.hrl").
 -include_lib("nkserver/include/nkserver.hrl").
@@ -35,6 +35,20 @@
 %% @doc 
 plugin_deps() ->
 	[].
+
+
+%%%% @doc
+%%plugin_config(_Id, Config, _Service) ->
+%%	Syntax = #{
+%%		audit_srv => atom
+%%	},
+%%	nkserver_util:parse_config(Config, Syntax).
+%%
+%%plugin_cache(_Id, Config, _Service) ->
+%%	Cache = #{
+%%		audit_srv => maps:get(audit_srv, Config, undefined)
+%%	},
+%%	{ok, Cache}.
 
 
 %% @doc
@@ -61,18 +75,3 @@ plugin_start(SrvId, _Config, _Service) ->
 			ok
 	end.
 
-
-%% @doc
-plugin_cache(_Id, Config, _Service) ->
-	Syntax = #{audit_srv => atom},
-	case nklib_syntax:parse(Config, Syntax) of
-		{ok, #{audit_srv:=AuditSrv}, _} ->
-			case nkserver_audit_app:get(activate) of
-				true ->
-					{ok, #{audit_srv => AuditSrv}};
-				false ->
-					ok
-			end;
-		_ ->
-			ok
-	end.

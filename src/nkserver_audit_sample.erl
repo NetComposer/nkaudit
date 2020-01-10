@@ -26,7 +26,7 @@
 insert(Srv) ->
     Audits = [
         #{app=>app1, group=>group1, level=>notice, data=>#{a=>1}},
-        #{app=>app1, group=>group2, namespace=>"a.b", data=>#{b=>2}},
+        #{app=>app1, group=>group2, namespace=>"a.b", data=>#{b=>2}, metadata=>#{count=>2}},
         #{app=>app2, group=>group2, namespace=>"a.b", level=>notice, data=>#{c=><<"c">>}}
     ],
     nkserver_audit:store(Srv, Audits, #{}).

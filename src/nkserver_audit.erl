@@ -41,12 +41,17 @@
         app := binary(),
         namespace => binary(),
         group => binary(),
-        type => binary(),
+        resource => binary(),
+        target => binary(),
         level => 1..7 | level(),
-        trace => binary(),
-        msg => binary(),
+        reason => binary(),
         data => map(),
-        metadata => map()
+        metadata => #{
+            count => integer(),
+            first_date => binary(),
+            trace_id => binary(),
+            tags => [{binary(), binary()}]
+        }
 }.
 
 -type store_opts() :: #{}.
@@ -136,20 +141,22 @@ parse([Audit|Rest], Acc) ->
         app => binary,
         namespace => binary,
         group => binary,
-        type => binary,
+        resource => binary,
+        target => binary,
         level => [{integer, 1, 7}, {atom, [debug,info,notice,warning,error]}],
-        trace => binary,
-        id => binary,
-        id2 => binary,
-        id3 => binary,
-        msg => binary,
+        reason => binary,
         data => map,
-        metadata => map,
+        metadata => #{
+            count => {integer, 1, none},
+            first_date => binary,
+            trace_id => binary,
+            tags => #{'__map_binary' => binary}
+        },
         '__mandatory' => [app],
         '__defaults' => #{
             namespace => <<>>,
             level => 2,
-            msg => <<>>,
+            reason => <<>>,
             data => #{},
             metadata => #{}
         }

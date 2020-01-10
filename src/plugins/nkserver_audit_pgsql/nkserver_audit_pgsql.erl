@@ -20,7 +20,7 @@
 
 -module(nkserver_audit_pgsql).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
--export([init/2, store/3, search/3, aggregate/3]).
+-export([init/1, store/3, search/3, aggregate/3]).
 -export([get_pgsql_srv/1]).
 
 -define(LLOG(Type, Txt, Args), lager:Type("NkSERVER AUDIT PGSQL "++Txt, Args)).
@@ -37,15 +37,20 @@
 %% ===================================================================
 
 
+%% @doc
+init(PgSrvId) ->
+    init(PgSrvId, 10).
+
+
 %% @private
-init(SrvId, Tries) when Tries > 0 ->
-    case nkactor_store_pgsql:query(SrvId, <<"SELECT uid FROM audit LIMIT 1">>) of
+init(PgSrvId, Tries) when Tries > 0 ->
+    case nkactor_store_pgsql:query(PgSrvId, <<"SELECT uid FROM audit LIMIT 1">>) of
         {ok, _, _} ->
             ok;
         {error, field_unknown} ->
-            Flavour = nkserver:get_cached_config(SrvId, nkpgsql, flavour),
+            Flavour = nkserver:get_cached_config(PgSrvId, nkpgsql, flavour),
             lager:warning("NkSERVER AUDIT: database not found: Creating it (~p)", [Flavour]),
-            case nkpgsql:query(SrvId, create_database_query(Flavour)) of
+            case nkpgsql:query(PgSrvId, create_database_query(Flavour)) of
                 {ok, _, _} ->
                     ok;
                 {error, Error} ->
@@ -55,7 +60,7 @@ init(SrvId, Tries) when Tries > 0 ->
         {error, Error} ->
             lager:warning("NkSERVER AUDIT: could not create database: ~p (~p tries left)", [Error, Tries]),
             timer:sleep(1000),
-            init(SrvId, Tries-1)
+            init(PgSrvId, Tries-1)
     end;
 
 init(_SrvId, _Tries) ->
@@ -74,16 +79,16 @@ create_database_query(postgresql) ->
             app TEXT NOT NULL,
             namespace TEXT NOT NULL,
             \"group\" TEXT,
-            type TEXT,
+            resource TEXT,
+            target TEXT,
             level SMALLINT NOT NULL,
-            trace TEXT,
-            msg TEXT,
+            reason TEXT,
             data JSONB,
             metadata JSONB,
             path TEXT NOT NULL
         );
-        CREATE INDEX date_idx on audit (date, app, namespace, \"group\", type);
-        CREATE INDEX app_idx on audit (app, namespace, \"group\", type, date);
+        CREATE INDEX date_idx on audit (date, app, \"group\", resource, path);
+        CREATE INDEX app_idx on audit (app, \"group\", resource, date, path);
         CREATE INDEX data_idx on audit USING gin(data);
         CREATE INDEX metadata_idx on audit USING gin(metadata);
         COMMIT;
@@ -97,7 +102,7 @@ store(SrvId, Audits, _Opts) ->
     Query = [
         <<
             "INSERT INTO audit "
-            "(uid,date,app,namespace,\"group\",type,level,trace,msg,data,metadata,path) "
+            "(uid,date,app,namespace,\"group\",resource,target,level,reason,data,metadata,path) "
             "VALUES ">>, nklib_util:bjoin(Values), <<";">>
     ],
     case query(SrvId, Query) of
@@ -190,26 +195,26 @@ update_values([Audit|Rest], Acc) ->
         app := App,
         namespace := Namespace,
         level := Level,
-        msg := Msg,
-        data := Data
+        reason := Reason,
+        data := Data,
+        metadata := Meta
     } = Audit,
     Group = maps:get(group, Audit, null),
-    Type = maps:get(type, Audit, null),
-    Trace = maps:get(trace, Audit, null),
+    Res = maps:get(resource, Audit, null),
+    Target = maps:get(target, Audit, null),
     Path = make_rev_path(Namespace),
-    Metadata = maps:get(metadata, Audit, #{}),
     Fields1 = [
         quote(UID),
         quote(Date),
         quote(App),
         quote(Namespace),
         quote(Group),
-        quote(Type),
+        quote(Res),
+        quote(Target),
         Level,
-        quote(Trace),
-        quote(Msg),
+        quote(Reason),
         quote(Data),
-        quote(Metadata),
+        quote(Meta),
         quote(Path)
     ],
     Fields2 = <<$(, (nklib_util:bjoin(Fields1))/binary, $)>>,
@@ -232,19 +237,19 @@ pgsql_audits(Result, Meta) ->
     end,
     Actors = lists:map(
         fun
-            ({UID, Date, App, Ns, Group, Type, Level, Trace, Msg}) ->
+            ({UID, Date, App, Ns, Group, Res, Target, Level, Reason}) ->
                 #{
                     uid => UID,
                     date => Date,
                     app => App,
                     namespace => Ns,
                     group => Group,
-                    type => Type,
+                    resource => Res,
+                    target => Target,
                     level => Level,
-                    trace => Trace,
-                    msg => Msg
+                    reason => Reason
                 };
-            ({UID, Date, App, Ns, Group, Type, Level, Trace, Msg, {jsonb, Data}, {jsonb, Meta}}) ->
+            ({UID, Date, App, Ns, Group, Res, Target, Level, Reason, {jsonb, Data}, {jsonb, MetaD}}) ->
 
                 #{
                     uid => UID,
@@ -252,12 +257,12 @@ pgsql_audits(Result, Meta) ->
                     app => App,
                     namespace => Ns,
                     group => Group,
-                    type => Type,
+                    resource => Res,
+                    target => Target,
                     level => Level,
-                    trace => Trace,
-                    msg => Msg,
+                    reason => Reason,
                     data => nklib_json:decode(Data),
-                    metadata => nklib_json:decode(Meta)
+                    metadata => nklib_json:decode(MetaD)
                 }
         end,
         Rows),

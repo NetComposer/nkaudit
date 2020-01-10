@@ -47,11 +47,9 @@ plugin_config(_SrvId, Config, #{class:=nkserver_audit}) ->
 
 %% @doc
 plugin_cache(_SrvId, Config, _Service) ->
-	PgsqlService = maps:get(pgsql_service, Config, undefined),
-	Debug = maps:get(debug, Config, false),
 	{ok, #{
-		pgsql_service => PgsqlService,
-		debug => Debug
+		pgsql_service => maps:get(pgsql_service, Config, undefined),
+		debug => maps:get(debug, Config, false)
 	}}.
 
 
@@ -61,5 +59,5 @@ plugin_start(SrvId, _Config, _Service) ->
 		undefined ->
 			ok;
 		PgSrvId ->
-			nkserver_audit_pgsql:init(PgSrvId, 10)
+			nkserver_audit_pgsql:init(PgSrvId)
 	end.
