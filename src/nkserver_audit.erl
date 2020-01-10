@@ -38,6 +38,7 @@
     #{
         uid := binary(),
         date := binary(),
+        node := binary(),
         app := binary(),
         namespace => binary(),
         group => binary(),
@@ -138,6 +139,7 @@ parse([Audit|Rest], Acc) ->
     Syntax = #{
         uid => binary,
         date => binary,
+        node => binary,
         app => binary,
         namespace => binary,
         group => binary,
@@ -162,7 +164,7 @@ parse([Audit|Rest], Acc) ->
         }
     },
     case nklib_syntax:parse(Audit, Syntax) of
-        {ok, Audit2, []} ->
+        {ok, Audit2, _} ->
             Audit3 = case maps:is_key(uid, Audit2) of
                 true ->
                     Audit2;
@@ -175,7 +177,13 @@ parse([Audit|Rest], Acc) ->
                 false ->
                     Audit3#{date => nklib_date:now_3339(usecs)}
             end,
-            Audit5 = case Audit4 of
+            Audit5 = case maps:is_key(node, Audit4) of
+                true ->
+                    Audit4;
+                false ->
+                    Audit4#{node => atom_to_binary(node(), utf8)}
+            end,
+            Audit6 = case Audit5 of
                 #{level:=Level} when is_atom(Level) ->
                     Level2 = case Level of
                         debug -> 1;
@@ -184,13 +192,11 @@ parse([Audit|Rest], Acc) ->
                         warning -> 4;
                         error -> 5
                     end,
-                    Audit4#{level:=Level2};
+                    Audit5#{level:=Level2};
                 _ ->
-                    Audit4
+                    Audit5
             end,
-            parse(Rest, [Audit5|Acc]);
-        {ok, _, [Field|_]} ->
-            {error, {field_unknown, Field}};
+            parse(Rest, [Audit6|Acc]);
         {error, Error} ->
             {error, Error}
     end.
