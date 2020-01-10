@@ -76,6 +76,7 @@ create_database_query(postgresql) ->
         CREATE TABLE audit (
             uid TEXT PRIMARY KEY NOT NULL,
             date TEXT NOT NULL,
+            node TEXT NOT NULL,
             app TEXT NOT NULL,
             namespace TEXT NOT NULL,
             \"group\" TEXT,
@@ -102,7 +103,7 @@ store(SrvId, Audits, _Opts) ->
     Query = [
         <<
             "INSERT INTO audit "
-            "(uid,date,app,namespace,\"group\",resource,target,level,reason,data,metadata,path) "
+            "(uid,date,node,app,namespace,\"group\",resource,target,level,reason,data,metadata,path) "
             "VALUES ">>, nklib_util:bjoin(Values), <<";">>
     ],
     case query(SrvId, Query) of
@@ -192,6 +193,7 @@ update_values([Audit|Rest], Acc) ->
     #{
         uid := UID,
         date := Date,
+        node := Node,
         app := App,
         namespace := Namespace,
         level := Level,
@@ -206,6 +208,7 @@ update_values([Audit|Rest], Acc) ->
     Fields1 = [
         quote(UID),
         quote(Date),
+        quote(Node),
         quote(App),
         quote(Namespace),
         quote(Group),
@@ -237,9 +240,10 @@ pgsql_audits(Result, Meta) ->
     end,
     Actors = lists:map(
         fun
-            ({UID, Date, App, Ns, Group, Res, Target, Level, Reason}) ->
+            ({UID, Date, Node, App, Ns, Group, Res, Target, Level, Reason}) ->
                 #{
                     uid => UID,
+                    node => Node,
                     date => Date,
                     app => App,
                     namespace => Ns,
@@ -249,11 +253,12 @@ pgsql_audits(Result, Meta) ->
                     level => Level,
                     reason => Reason
                 };
-            ({UID, Date, App, Ns, Group, Res, Target, Level, Reason, {jsonb, Data}, {jsonb, MetaD}}) ->
+            ({UID, Date, Node, App, Ns, Group, Res, Target, Level, Reason, {jsonb, Data}, {jsonb, MetaD}}) ->
 
                 #{
                     uid => UID,
                     date => Date,
+                    node => Node,
                     app => App,
                     namespace => Ns,
                     group => Group,
