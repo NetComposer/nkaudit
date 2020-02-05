@@ -169,7 +169,7 @@ parse([Audit|Rest], Acc) ->
                 true ->
                     Audit2;
                 false ->
-                    Audit2#{uid => nklib_util:luid()}
+                    Audit2#{uid => make_uid()}
             end,
             Audit4 = case maps:is_key(date, Audit3) of
                 true ->
@@ -201,3 +201,8 @@ parse([Audit|Rest], Acc) ->
             {error, Error}
     end.
 
+
+make_uid() ->
+    Time = nklib_date:now_bin(msecs),   % 9 bytes
+    <<UUID:18/binary, _/binary>> = nklib_util:luid(),
+    <<Time/binary, UUID/binary>>.
