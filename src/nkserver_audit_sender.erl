@@ -168,9 +168,9 @@ do_send_audits(SrvId, Audits, Total) ->
             {message_queue_len, QueueLen} = process_info(self(), message_queue_len),
             case Total >= ?BATCH of
                 true ->
-                    lager:info("Sent ~p/~p AUDITS (waiting ~p)", [?BATCH, Total, QueueLen]);
+                    lager:debug("Sent ~p/~p AUDITS (waiting ~p)", [?BATCH, Total, QueueLen]);
                 false ->
-                    lager:info("Sent ~p AUDITS (waiting ~p)", [Total, QueueLen])
+                    lager:debug("Sent ~p AUDITS (waiting ~p)", [Total, QueueLen])
             end;
         Error ->
             lager:warning("Error sending audits: ~p", [Error])
