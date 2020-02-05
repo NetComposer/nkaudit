@@ -37,8 +37,8 @@
 -type audit() ::
     #{
         uid := binary(),
-        date := binary(),
         node := binary(),
+        date := binary(),
         app := binary(),
         namespace => binary(),
         group => binary(),
@@ -71,7 +71,7 @@ store(SrvId, Audits) ->
     store(SrvId, Audits, #{}).
 
 
-%% @doc
+%% @doc Stores an audit sync with the database
 -spec store(nkserver:id(), audit()|[audit()], store_opts()) ->
     ok | {error, term()}.
 
@@ -89,7 +89,7 @@ store(SrvId, Audits, Opts) ->
     end.
 
 
-%% @doc
+%% @doc Gets all apps storing audits
 get_apps(SrvId) ->
     aggregate(SrvId, nkserver_audit_apps, #{}).
 
@@ -107,7 +107,7 @@ search(SrvId, SearchSpec, SearchOpts) ->
     end.
 
 
-%% @doc
+%% @doc Generic aggregation
 -spec aggregate(nkserver:id(), agg_type(), map()) ->
     {ok, [{binary(), integer()}], Meta::map()} | {error, term()}.
 
@@ -138,8 +138,8 @@ parse([], Acc) ->
 parse([Audit|Rest], Acc) ->
     Syntax = #{
         uid => binary,
-        date => binary,
         node => binary,
+        date => binary,
         app => binary,
         namespace => binary,
         group => binary,

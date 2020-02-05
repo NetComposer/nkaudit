@@ -62,8 +62,10 @@
 % For JSON fields, the type 'object' can be used for @> operator
 % for example, for field spec.phone.phone => array, the query
 %   #{field => "spec.phone.phone", eq=>"123} generates data->'spec'->'phone' @> '[{"phone": "123456"}]'
+% For 'range' queries, a value like min|max is expected (will find >= mind AND <= max)
+% Use ! prefix to make strict: !min|!max is expected (will find > mind AND < max)
 
--type field_type() :: string | boolean | integer | object.
+-type field_type() :: string | boolean | integer | object | array.
 
 
 -type filter_spec() ::
@@ -75,7 +77,7 @@
 }.
 
 -type filter_op() ::
-    eq | ne | lt | lte | gt | gte | values | exists | prefix.
+    eq | ne | lt | lte | gt | gte | values | exists | range | prefix.
 
 
 -type value() :: string() | binary() | integer() | boolean().
@@ -144,7 +146,7 @@ search_spec_syntax_filter() ->
     #{
         field => binary,
         type => {atom, [string, integer, boolean, object]},
-        op => {atom, [eq, ne, lt, lte, gt, gte, values, exists, prefix, ignore]},
+        op => {atom, [eq, ne, lt, lte, gt, gte, values, exists, prefix, range, ignore]},
         value => any,
         '__mandatory' => [field, value]
     }.
@@ -287,6 +289,7 @@ expand_op(Value) ->
                 lte -> lte;
                 prefix -> prefix;
                 values -> values;
+                range -> range;
                 _ -> none
             end,
             case Op2 of
