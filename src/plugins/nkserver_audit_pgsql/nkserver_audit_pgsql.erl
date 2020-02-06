@@ -74,18 +74,18 @@ create_database_query(postgresql) ->
         -- Comment
         BEGIN;
         CREATE TABLE audit (
-            uid TEXT PRIMARY KEY NOT NULL,
             date TEXT NOT NULL,
-            node TEXT NOT NULL,
+            reason TEXT,
+            level SMALLINT NOT NULL,
+            target TEXT,
+            data JSONB,
+            metadata JSONB,
+            uid TEXT PRIMARY KEY NOT NULL,
             app TEXT NOT NULL,
             namespace TEXT NOT NULL,
             \"group\" TEXT,
             resource TEXT,
-            target TEXT,
-            level SMALLINT NOT NULL,
-            reason TEXT,
-            data JSONB,
-            metadata JSONB,
+            node TEXT NOT NULL,
             path TEXT NOT NULL
         );
         CREATE INDEX date_idx on audit (date, app, \"group\", resource, path);
