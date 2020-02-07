@@ -163,17 +163,22 @@ do_send_audits(#state{srv=SrvId, audits=Audits, total=Total}=State) ->
 
 %% @private
 do_send_audits(SrvId, Audits, Total) ->
-    case ?CALL_SRV(SrvId, audit_store, [SrvId, Audits, #{}]) of
-        {ok, _Meta} ->
-            {message_queue_len, QueueLen} = process_info(self(), message_queue_len),
-            case Total >= ?BATCH of
-                true ->
-                    lager:debug("Sent ~p/~p AUDITS (waiting ~p)", [?BATCH, Total, QueueLen]);
-                false ->
-                    lager:debug("Sent ~p AUDITS (waiting ~p)", [Total, QueueLen])
-            end;
-        Error ->
-            lager:warning("Error sending audits: ~p", [Error])
+    try
+        case ?CALL_SRV(SrvId, audit_store, [SrvId, Audits, #{}]) of
+            {ok, _Meta} ->
+                {message_queue_len, QueueLen} = process_info(self(), message_queue_len),
+                case Total >= ?BATCH of
+                    true ->
+                        lager:debug("Sent ~p/~p AUDITS (waiting ~p)", [?BATCH, Total, QueueLen]);
+                    false ->
+                        lager:debug("Sent ~p AUDITS (waiting ~p)", [Total, QueueLen])
+                end;
+            Error ->
+                lager:warning("Error sending audits: ~p", [Error])
+        end
+    catch
+        Class:Reason:Stack ->
+            lager:warning("Exception calling audit_store: ~p ~p (~p)", [Class, Reason, Stack])
     end.
 
 
