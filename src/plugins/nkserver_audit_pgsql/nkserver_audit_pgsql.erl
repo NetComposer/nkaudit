@@ -75,21 +75,24 @@ create_database_query(postgresql) ->
         BEGIN;
         CREATE TABLE audit (
             date TEXT NOT NULL,
+            type TEXT NOT NULL,
             reason TEXT,
-            level SMALLINT NOT NULL,
             target TEXT,
             data JSONB,
             metadata JSONB,
-            uid TEXT PRIMARY KEY NOT NULL,
             app TEXT NOT NULL,
             namespace TEXT NOT NULL,
             \"group\" TEXT,
             resource TEXT,
+            level SMALLINT NOT NULL,
+            uid TEXT PRIMARY KEY NOT NULL,
             node TEXT NOT NULL,
             path TEXT NOT NULL
         );
-        CREATE INDEX date_idx on audit (date, app, \"group\", resource, path);
-        CREATE INDEX app_idx on audit (app, \"group\", resource, date, path);
+        CREATE INDEX date_idx on audit (date, \"group\", resource, path);
+        CREATE INDEX app_idx on audit (\"group\", resource, date, path);
+        CREATE INDEX date_type_idx on audit (date, type, path);
+        CREATE INDEX type_date_idx on audit (type, date, path);
         CREATE INDEX data_idx on audit USING gin(data);
         CREATE INDEX metadata_idx on audit USING gin(metadata);
         COMMIT;
@@ -103,7 +106,7 @@ store(SrvId, Audits, _Opts) ->
     Query = [
         <<
             "INSERT INTO audit "
-            "(uid,date,node,app,namespace,\"group\",resource,target,level,reason,data,metadata,path) "
+            "(uid,date,node,app,namespace,\"group\",resource,type,target,level,reason,data,metadata,path) "
             "VALUES ">>, nklib_util:bjoin(Values), <<";">>
     ],
     case query(SrvId, Query) of
@@ -196,6 +199,7 @@ update_values([Audit|Rest], Acc) ->
         node := Node,
         app := App,
         namespace := Namespace,
+        type := Type,
         level := Level,
         reason := Reason,
         data := Data,
@@ -213,6 +217,7 @@ update_values([Audit|Rest], Acc) ->
         quote(Namespace),
         quote(Group),
         quote(Res),
+        quote(Type),
         quote(Target),
         Level,
         quote(Reason),
@@ -240,7 +245,7 @@ pgsql_audits(Result, Meta) ->
     end,
     Actors = lists:map(
         fun
-            ({UID, Date, Node, App, Ns, Group, Res, Target, Level, Reason}) ->
+            ({UID, Date, Node, App, Ns, Group, Res, Type, Target, Level, Reason}) ->
                 #{
                     uid => UID,
                     node => Node,
@@ -249,11 +254,12 @@ pgsql_audits(Result, Meta) ->
                     namespace => Ns,
                     group => Group,
                     resource => Res,
+                    type => Type,
                     target => Target,
                     level => Level,
                     reason => Reason
                 };
-            ({UID, Date, Node, App, Ns, Group, Res, Target, Level, Reason, {jsonb, Data}, {jsonb, MetaD}}) ->
+            ({UID, Date, Node, App, Ns, Group, Res, Type, Target, Level, Reason, {jsonb, Data}, {jsonb, MetaD}}) ->
 
                 #{
                     uid => UID,
@@ -263,6 +269,7 @@ pgsql_audits(Result, Meta) ->
                     namespace => Ns,
                     group => Group,
                     resource => Res,
+                    type => Type,
                     target => Target,
                     level => Level,
                     reason => Reason,

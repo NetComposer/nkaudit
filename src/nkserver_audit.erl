@@ -36,16 +36,17 @@
 
 -type audit() ::
     #{
-        uid := binary(),
-        node := binary(),
-        date := binary(),
-        app := binary(),
-        namespace => binary(),
+        uid := binary(),                % Generated
+        node := binary(),               % Generated
+        date := binary(),               % Generated
+        app := binary(),                % Mandatory
+        namespace => binary(),          % Default ""
         group => binary(),
         resource => binary(),
+        type => binary(),               % Mandatory
         target => binary(),
-        level => 1..7 | level(),
-        reason => binary(),
+        level => 1..7 | level(),        % Default 2
+        reason => binary(),             % Default ""
         data => map(),
         metadata => #{
             count => integer(),
@@ -144,6 +145,7 @@ parse([Audit|Rest], Acc) ->
         namespace => binary,
         group => binary,
         resource => binary,
+        type => binary,
         target => binary,
         level => [{integer, 1, 7}, {atom, [debug,info,notice,warning,error]}],
         reason => binary,
@@ -154,7 +156,7 @@ parse([Audit|Rest], Acc) ->
             trace_id => binary,
             tags => #{'__map_binary' => binary}
         },
-        '__mandatory' => [app],
+        '__mandatory' => [app, type],
         '__defaults' => #{
             namespace => <<>>,
             level => 2,
@@ -184,17 +186,22 @@ parse([Audit|Rest], Acc) ->
                     Audit4#{node => atom_to_binary(node(), utf8)}
             end,
             Audit6 = case Audit5 of
-                #{level:=Level} when is_atom(Level) ->
-                    Level2 = case Level of
-                        debug -> 1;
-                        info -> 2;
-                        notice -> 3;
-                        warning -> 4;
-                        error -> 5
-                    end,
-                    Audit5#{level:=Level2};
+                #{level:=Level} ->
+                    case is_atom(Level) of
+                        true ->
+                            Level2 = case Level of
+                                debug -> 1;
+                                info -> 2;
+                                notice -> 3;
+                                warning -> 4;
+                                error -> 5
+                            end,
+                            Audit5#{level:=Level2};
+                        false ->
+                            Audit5
+                    end;
                 _ ->
-                    Audit5
+                    Audit5#{level=>2}
             end,
             parse(Rest, [Audit6|Acc]);
         {error, Error} ->
