@@ -54,14 +54,22 @@ store(SrvId, Audit) when is_map(Audit) ->
 
 %% @doc
 do_store(SrvId, Audit) when is_map(Audit) ->
-    Pid = nklib_util:do_config_get({?MODULE, SrvId}),
-    gen_server:cast(Pid, {new_audit, Audit}).
+    case nklib_util:do_config_get({?MODULE, SrvId}, undefined) of
+        Pid when is_pid(Pid) ->
+            gen_server:cast(Pid, {new_audit, Audit});
+        _ ->
+            ok
+    end.
 
 
 %% @doc
 get_total(SrvId) ->
-    Pid = nklib_util:do_config_get({?MODULE, SrvId}),
-    gen_server:call(Pid, get_total).
+    case nklib_util:do_config_get({?MODULE, SrvId}, undefined) of
+        Pid when is_pid(Pid) ->
+            gen_server:call(Pid, get_total);
+        _ ->
+            {error, audit_not_started}
+    end.
 
 
 %% @doc
