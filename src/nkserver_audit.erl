@@ -150,12 +150,7 @@ parse([Audit|Rest], Acc) ->
         level => [{integer, 1, 7}, {atom, [debug,info,notice,warning,error]}],
         reason => binary,
         data => map,
-        metadata => #{
-            count => {integer, 1, none},
-            first_date => binary,
-            trace_id => binary,
-            tags => #{'__map_binary' => binary}
-        },
+        metadata => map,
         '__mandatory' => [app, type],
         '__defaults' => #{
             namespace => <<>>,
