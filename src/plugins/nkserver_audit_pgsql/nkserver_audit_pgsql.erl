@@ -75,15 +75,15 @@ create_database_query(postgresql) ->
         BEGIN;
         CREATE TABLE audit (
             date TEXT NOT NULL,
+            app TEXT NOT NULL,
+            \"group\" TEXT,
+            resource TEXT,
             type TEXT NOT NULL,
             reason TEXT,
             target TEXT,
             data JSONB,
             metadata JSONB,
-            app TEXT NOT NULL,
             namespace TEXT NOT NULL,
-            \"group\" TEXT,
-            resource TEXT,
             level SMALLINT NOT NULL,
             uid TEXT PRIMARY KEY NOT NULL,
             node TEXT NOT NULL,
