@@ -20,8 +20,8 @@
 
 -module(nkserver_audit_pgsql).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
--export([init/1, store/3, search/3, aggregate/3]).
--export([get_pgsql_srv/1]).
+-export([init/2, store/4, search/4, aggregate/4]).
+-export([get_pgsql_srv/1, get_table/1]).
 
 -define(LLOG(Type, Txt, Args), lager:Type("NkSERVER AUDIT PGSQL "++Txt, Args)).
 
@@ -38,42 +38,41 @@
 
 
 %% @doc
-init(PgSrvId) ->
-    init(PgSrvId, 10).
+init(PgSrvId, Table) ->
+    init(PgSrvId, Table, 10).
 
 
 %% @private
-init(PgSrvId, Tries) when Tries > 0 ->
-    case nkactor_store_pgsql:query(PgSrvId, <<"SELECT uid FROM audit LIMIT 1">>) of
+init(PgSrvId, Table, Tries) when Tries > 0 ->
+    case nkactor_store_pgsql:query(PgSrvId, <<"SELECT uid FROM ", Table/binary, " LIMIT 1">>) of
         {ok, _, _} ->
             ok;
         {error, field_unknown} ->
             Flavour = nkserver:get_cached_config(PgSrvId, nkpgsql, flavour),
-            lager:warning("NkSERVER AUDIT: database not found: Creating it (~p)", [Flavour]),
-            case nkpgsql:query(PgSrvId, create_database_query(Flavour)) of
+            lager:warning("NkSERVER AUDIT: table (~s) not found: Creating it (~p)", [Table, Flavour]),
+            case nkpgsql:query(PgSrvId, create_database_query(Flavour, Table)) of
                 {ok, _, _} ->
                     ok;
                 {error, Error} ->
-                    lager:error("NkSERVER AUDIT: Could not create database: ~p", [Error]),
+                    lager:error("NkSERVER AUDIT: Could not create table: ~p", [Error]),
                     {error, Error}
             end;
         {error, Error} ->
-            lager:warning("NkSERVER AUDIT: could not create database: ~p (~p tries left)", [Error, Tries]),
+            lager:warning("NkSERVER AUDIT: could not create table: ~p (~p tries left)", [Error, Tries]),
             timer:sleep(1000),
-            init(PgSrvId, Tries-1)
+            init(PgSrvId, Table, Tries-1)
     end;
 
-init(_SrvId, _Tries) ->
+init(_SrvId, _Table, _Tries) ->
     {error, database_not_available}.
 
 
-
 %% @private
-create_database_query(postgresql) ->
+create_database_query(postgresql, Table) ->
     <<"
         -- Comment
         BEGIN;
-        CREATE TABLE audit (
+        CREATE TABLE ", Table/binary, " (
             date TEXT NOT NULL,
             app TEXT NOT NULL,
             \"group\" TEXT,
@@ -89,27 +88,26 @@ create_database_query(postgresql) ->
             node TEXT NOT NULL,
             path TEXT NOT NULL
         );
-        CREATE INDEX date_idx on audit (date, \"group\", resource, path);
-        CREATE INDEX app_idx on audit (\"group\", resource, date, path);
-        CREATE INDEX date_type_idx on audit (date, type, path);
-        CREATE INDEX type_date_idx on audit (type, date, path);
-        CREATE INDEX data_idx on audit USING gin(data);
-        CREATE INDEX metadata_idx on audit USING gin(metadata);
+        CREATE INDEX ", Table/binary, "_date_idx on ", Table/binary, " (date, \"group\", resource, path);
+        CREATE INDEX ", Table/binary, "_app_idx on ", Table/binary, " (\"group\", resource, date, path);
+        CREATE INDEX ", Table/binary, "_date_type_idx on ", Table/binary, " (date, type, path);
+        CREATE INDEX ", Table/binary, "_type_date_idx on ", Table/binary, " (type, date, path);
+        CREATE INDEX ", Table/binary, "_data_idx on ", Table/binary, " USING gin(data);
+        CREATE INDEX ", Table/binary, "_metadata_idx on ", Table/binary, " USING gin(metadata);
         COMMIT;
     ">>.
 
 
-
 %% @doc
-store(SrvId, Audits, _Opts) ->
+store(PgSrvId, Table, Audits, _Opts) ->
     Values = update_values(Audits, []),
     Query = [
         <<
-            "INSERT INTO audit "
-            "(uid,date,node,app,namespace,\"group\",resource,type,target,level,reason,data,metadata,path) "
+            "INSERT INTO ", Table/binary, " ",
+             "(uid,date,node,app,namespace,\"group\",resource,type,target,level,reason,data,metadata,path) "
             "VALUES ">>, nklib_util:bjoin(Values), <<";">>
     ],
-    case query(SrvId, Query) of
+    case query(PgSrvId, Query) of
         {ok, _, SaveMeta} ->
             {ok, SaveMeta};
         {error, Error} ->
@@ -117,7 +115,7 @@ store(SrvId, Audits, _Opts) ->
     end.
 
 
-search(SrvId, Spec, _Opts) ->
+search(SrvId, Table, Spec, _Opts) ->
     From = maps:get(from, Spec, 0),
     Size = maps:get(size, Spec, 10),
     Totals = maps:get(get_total, Spec, false),
@@ -131,14 +129,14 @@ search(SrvId, Spec, _Opts) ->
         case Totals of
             true ->
                 [
-                    <<"SELECT COUNT(*) FROM audit">>,
+                    <<"SELECT COUNT(*) FROM ", Table/binary, " ">>,
                     SQLFilters,
                     <<";">>
                 ];
             false ->
                 []
         end,
-        nkserver_audit_pgsql_sql:select(Spec),
+        nkserver_audit_pgsql_sql:select(Table, Spec),
         SQLFilters,
         SQLSort,
         <<" OFFSET ">>, to_bin(From), <<" LIMIT ">>, to_bin(Size),
@@ -148,11 +146,11 @@ search(SrvId, Spec, _Opts) ->
 
 
 %% @doc
-aggregate(SrvId, nkserver_audit_apps, Opts) ->
+aggregate(SrvId, Table, nkserver_audit_apps, Opts) ->
     Namespace = maps:get(namespace, Opts, <<>>),
     Deep = maps:get(deep, Opts, true),
     Query = [
-        <<"SELECT \"app\", COUNT(\"app\") FROM audit">>,
+        <<"SELECT \"app\", COUNT(\"app\") FROM ", Table/binary>>,
         <<" WHERE ">>, filter_path(Namespace, Deep),
         <<" GROUP BY \"app\";">>
     ],
@@ -165,8 +163,12 @@ aggregate(SrvId, nkserver_audit_apps, Opts) ->
 %% ===================================================================
 
 %% @doc
-get_pgsql_srv(ActorSrvId) ->
-    nkserver:get_cached_config(ActorSrvId, nkserver_audit_pgsql, pgsql_service).
+get_pgsql_srv(SrvId) ->
+    nkserver:get_cached_config(SrvId, nkserver_audit_pgsql, pgsql_service).
+
+%% @doc
+get_table(SrvId) ->
+    nkserver:get_cached_config(SrvId, nkserver_audit_pgsql, table).
 
 
 %% @doc Performs a query. Must use the PgSQL service

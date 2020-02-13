@@ -40,7 +40,9 @@ plugin_deps() ->
 plugin_config(_SrvId, Config, #{class:=nkserver_audit}) ->
 	Syntax = #{
 		pgsql_service => atom,
-		debug => boolean
+		table => binary,
+		debug => boolean,
+		'__defaults' => #{table => <<"audit">>}
 	},
 	nkserver_util:parse_config(Config, Syntax).
 
@@ -49,6 +51,7 @@ plugin_config(_SrvId, Config, #{class:=nkserver_audit}) ->
 plugin_cache(_SrvId, Config, _Service) ->
 	{ok, #{
 		pgsql_service => maps:get(pgsql_service, Config, undefined),
+		table => maps:get(table, Config),
 		debug => maps:get(debug, Config, false)
 	}}.
 
@@ -59,5 +62,6 @@ plugin_start(SrvId, _Config, _Service) ->
 		undefined ->
 			ok;
 		PgSrvId ->
-			nkserver_audit_pgsql:init(PgSrvId)
+			Table = nkserver_audit_pgsql:get_table(SrvId),
+			nkserver_audit_pgsql:init(PgSrvId, Table)
 	end.

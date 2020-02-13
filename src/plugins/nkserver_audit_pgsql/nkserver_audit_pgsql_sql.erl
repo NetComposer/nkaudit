@@ -22,7 +22,7 @@
 %% @doc SQL utilities for stores to use
 -module(nkserver_audit_pgsql_sql).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
--export([select/1, filters/1, sort/1, field_name/2]).
+-export([select/2, filters/1, sort/1, field_name/2]).
 -import(nkactor_store_pgsql, [quote/1, filter_path/2]).
 
 
@@ -32,7 +32,7 @@
 
 
 %% @private
-select(Params) ->
+select(Table, Params) ->
     [
         <<"SELECT uid,date,app,namespace,\"group\",resource,type,target,level,reason">>,
         case maps:get(get_data, Params, false) of
@@ -41,7 +41,7 @@ select(Params) ->
             false ->
                 []
         end,
-        <<" FROM audit">>
+        <<" FROM ", Table/binary>>
     ].
 
 

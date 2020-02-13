@@ -88,7 +88,8 @@ call(SrvId, Op, Arg, Opts) ->
         undefined ->
             continue;
         PgSrvId ->
-            Reply = nkserver_audit_pgsql:Op(PgSrvId, Arg, Opts),
+            Table = nkserver_audit_pgsql:get_table(SrvId),
+            Reply = nkserver_audit_pgsql:Op(PgSrvId, Table, Arg, Opts),
             reply(Reply)
     end.
 
