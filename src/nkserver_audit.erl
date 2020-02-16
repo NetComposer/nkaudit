@@ -32,7 +32,7 @@
 %% ===================================================================
 
 
--type level() :: debug | info | notice | warning | error.
+-type level() :: nkserver_trace:level().
 
 -type audit() ::
     #{
@@ -147,7 +147,7 @@ parse([Audit|Rest], Acc) ->
         resource => [{atom, [null]}, binary],
         type => binary,
         target => [{atom, [null]}, binary],
-        level => [{integer, 1, 7}, {atom, [debug,info,notice,warning,error]}],
+        level => [{integer, 1, 7}, {atom, [debug,trace,info,event,notice,warning,error]}],
         reason => binary,
         data => map,
         metadata => map,
@@ -184,13 +184,7 @@ parse([Audit|Rest], Acc) ->
                 #{level:=Level} ->
                     case is_atom(Level) of
                         true ->
-                            Level2 = case Level of
-                                debug -> 1;
-                                info -> 2;
-                                notice -> 3;
-                                warning -> 4;
-                                error -> 5
-                            end,
+                            Level2 = nkserver_trace:name_to_level(Level),
                             Audit5#{level:=Level2};
                         false ->
                             Audit5
