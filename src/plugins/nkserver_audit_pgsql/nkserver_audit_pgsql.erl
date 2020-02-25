@@ -186,9 +186,16 @@ query(SrvId, Query) ->
     {error, {pgsql_error, nkpgsql:pgsql_error()}|term()}.
 
 query(SrvId, Query, QueryMeta) ->
-    nkserver_trace:tags(#{<<"query.sql">>=>list_to_binary([Query])}),
-    nkpgsql:query(SrvId, Query, QueryMeta).
-
+    QueryBin = list_to_binary([Query]),
+    Tag = case byte_size(QueryBin) < 4096 of
+        true ->
+            QueryBin;
+        false ->
+            <<Tag0:4000/binary, _/binary>> = QueryBin,
+            <<Tag0/binary, "...">>
+    end,
+    nkserver_trace:tags(#{<<"query.sql">>=>Tag}),
+    nkpgsql:query(SrvId, QueryBin, QueryMeta).
 
 %% @private
 update_values([], Acc) ->
