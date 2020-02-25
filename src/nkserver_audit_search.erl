@@ -65,7 +65,7 @@
 % For 'range' queries, a value like min|max is expected (will find >= mind AND <= max)
 % Use ! prefix to make strict: !min|!max is expected (will find > mind AND < max)
 
--type field_type() :: string | boolean | integer | object | array.
+-type field_type() :: string | string_null | boolean | integer | object | array.
 
 
 -type filter_spec() ::
@@ -203,8 +203,8 @@ check_field_filter([#{field:=Field}=Filter|Rest], Acc) ->
     case field_name(Field) of
         ok ->
             Filter2 = filter_op(Filter),
-            Filter3 = field_type(Filter2),
-            check_field_filter(Rest, [Filter3|Acc]);
+            Type = field_type(Filter2),
+            check_field_filter(Rest, [Filter2#{type=>Type}|Acc]);
         error ->
             {error, {field_invalid, Field}}
     end.
@@ -231,8 +231,8 @@ check_field_sort([], Acc) ->
 check_field_sort([#{field:=Field}=Sort|Rest], Acc) ->
     case field_name(Field) of
         ok ->
-            Sort2 = field_type(Sort),
-            check_field_sort(Rest, [Sort2|Acc]);
+            Type = field_type(Sort),
+            check_field_sort(Rest, [Sort#{type=>Type}|Acc]);
         error ->
             {error, {field_invalid, Field}}
     end.
@@ -243,21 +243,28 @@ field_name(<<"uid">>) -> ok;
 field_name(<<"date">>) -> ok;
 field_name(<<"app">>) -> ok;
 field_name(<<"group">>) -> ok;
+field_name(<<"resource">>) -> ok;
 field_name(<<"type">>) -> ok;
+field_name(<<"target">>) -> ok;
 field_name(<<"level">>) -> ok;
-field_name(<<"trace">>) -> ok;
-field_name(<<"id">>) -> ok;
-field_name(<<"id2">>) -> ok;
-field_name(<<"id3">>) -> ok;
-field_name(<<"msg">>) -> ok;
-field_name(<<"data">>) -> ok;
-field_name(<<"data.", _/binary>>) -> ok.
+field_name(<<"node">>) -> ok;
+field_name(<<"namespace", _/binary>>) -> ok;
+field_name(<<"data.", _/binary>>) -> ok;
+field_name(<<"metadata.", _/binary>>) -> ok;
+field_name(_) -> error.
 
 
 %% @private
-field_type(#{type:=_}=Filter) -> Filter;
-field_type(#{field:=<<"level">>}=Filter) -> Filter#{type=>integer};
-field_type(Filter) -> Filter#{type=>string}.
+field_type(#{type:=Type}) -> Type;
+
+field_type(#{field:=Field}) ->
+    case Field of
+        <<"level">> -> integer;
+        <<"group">> -> string_null;
+        <<"resource">> -> string_null;
+        <<"type">> -> string_null;
+        _ -> string
+    end.
 
 
 %% @private

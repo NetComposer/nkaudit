@@ -24,6 +24,7 @@
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
 -export([store/2, store/3, get_apps/1, search/3]).
 -export([aggregate/3, parse/1]).
+-import(nkserver_trace, [trace/2]).
 
 -include_lib("nkserver/include/nkserver.hrl").
 
@@ -100,12 +101,16 @@ get_apps(SrvId) ->
     {ok, [audit()], Meta::map()} | {error, term()}.
 
 search(SrvId, SearchSpec, SearchOpts) ->
-    case nkserver_audit_search:parse_spec(SearchSpec, SearchOpts) of
-        {ok, SearchSpec2} ->
-            ?CALL_SRV(SrvId, audit_search, [SrvId, SearchSpec2, SearchOpts]);
-        {error, Error} ->
-            {error, Error}
-    end.
+    Fun = fun() ->
+        case nkserver_audit_search:parse_spec(SearchSpec, SearchOpts) of
+            {ok, SearchSpec2} ->
+                trace("search parsed: ~p", [SearchSpec2]),
+                ?CALL_SRV(SrvId, audit_search, [SrvId, SearchSpec2, SearchOpts]);
+            {error, Error} ->
+                {error, Error}
+        end
+    end,
+    nkserver_trace:new_span(SrvId, {nkserver_audit, search}, Fun).
 
 
 %% @doc Generic aggregation

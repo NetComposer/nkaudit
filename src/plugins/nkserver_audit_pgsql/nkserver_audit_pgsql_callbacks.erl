@@ -88,9 +88,11 @@ call(SrvId, Op, Arg, Opts) ->
         undefined ->
             continue;
         PgSrvId ->
-            Table = nkserver_audit_pgsql:get_table(SrvId),
-            Reply = nkserver_audit_pgsql:Op(PgSrvId, Table, Arg, Opts),
-            reply(Reply)
+            Fun = fun() ->
+                Table = nkserver_audit_pgsql:get_table(SrvId),
+                nkserver_audit_pgsql:Op(PgSrvId, Table, Arg, Opts)
+            end,
+            new_span(SrvId, PgSrvId, Op, Fun)
     end.
 
 
@@ -101,4 +103,10 @@ reply({error, Error}) ->
 reply(Other) ->
     Other.
 
+
+%% @private
+new_span(SrvId, PgSrvId, Op, Fun) ->
+    Opts = #{pgsql_app => PgSrvId },
+    Fun2 = fun() -> reply(Fun()) end,
+    nkserver_trace:new_span(SrvId, {nkactor_store_pgsql, Op}, Fun2, Opts).
 

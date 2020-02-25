@@ -104,7 +104,7 @@ store(PgSrvId, Table, Audits, _Opts) ->
     Query = [
         <<
             "INSERT INTO ", Table/binary, " ",
-             "(uid,date,node,app,namespace,\"group\",resource,type,target,level,reason,data,metadata,path) "
+             "(date,app,\"group\",resource,type,reason,target,data,metadata,namespace,level,uid,node,path) "
             "VALUES ">>, nklib_util:bjoin(Values), <<";">>
     ],
     case query(PgSrvId, Query) of
@@ -177,7 +177,7 @@ get_table(SrvId) ->
     {error, {pgsql_error, nkpgsql:pgsql_error()}|term()}.
 
 query(SrvId, Query) ->
-    nkpgsql:query(SrvId, Query, #{}).
+    query(SrvId, Query, #{}).
 
 
 %% @doc Performs a query. Must use the PgSQL service
@@ -186,8 +186,8 @@ query(SrvId, Query) ->
     {error, {pgsql_error, nkpgsql:pgsql_error()}|term()}.
 
 query(SrvId, Query, QueryMeta) ->
+    nkserver_trace:tags(#{<<"query.sql">>=>list_to_binary([Query])}),
     nkpgsql:query(SrvId, Query, QueryMeta).
-
 
 
 %% @private
@@ -212,19 +212,19 @@ update_values([Audit|Rest], Acc) ->
     Target = maps:get(target, Audit, null),
     Path = make_rev_path(Namespace),
     Fields1 = [
-        quote(UID),
         quote(Date),
-        quote(Node),
         quote(App),
-        quote(Namespace),
         quote(Group),
         quote(Res),
         quote(Type),
-        quote(Target),
-        Level,
         quote(Reason),
+        quote(Target),
         quote(Data),
         quote(Meta),
+        quote(Namespace),
+        Level,
+        quote(UID),
+        quote(Node),
         quote(Path)
     ],
     Fields2 = <<$(, (nklib_util:bjoin(Fields1))/binary, $)>>,
@@ -247,7 +247,7 @@ pgsql_audits(Result, Meta) ->
     end,
     Actors = lists:map(
         fun
-            ({UID, Date, Node, App, Ns, Group, Res, Type, Target, Level, Reason}) ->
+            ({Date, App, Group, Res, Type, Reason, Target, Ns, Level, UID, Node}) ->
                 #{
                     uid => UID,
                     node => Node,
@@ -261,7 +261,7 @@ pgsql_audits(Result, Meta) ->
                     level => Level,
                     reason => Reason
                 };
-            ({UID, Date, Node, App, Ns, Group, Res, Type, Target, Level, Reason, {jsonb, Data}, {jsonb, MetaD}}) ->
+            ({Date, App, Group, Res, Type, Reason, Target, Ns, Level, UID, Node, {jsonb, Data}, {jsonb, MetaD}}) ->
 
                 #{
                     uid => UID,
