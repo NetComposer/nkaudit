@@ -88,10 +88,10 @@ create_database_query(postgresql, Table) ->
             node TEXT NOT NULL,
             path TEXT NOT NULL
         );
-        CREATE INDEX ", Table/binary, "_date_idx on ", Table/binary, " (date, \"group\", resource, path);
-        CREATE INDEX ", Table/binary, "_app_idx on ", Table/binary, " (\"group\", resource, date, path);
-        CREATE INDEX ", Table/binary, "_date_type_idx on ", Table/binary, " (date, type, path);
-        CREATE INDEX ", Table/binary, "_type_date_idx on ", Table/binary, " (type, date, path);
+        CREATE INDEX ", Table/binary, "_scan_idx on ", Table/binary, " (date DESC, uid DESC);
+        CREATE INDEX ", Table/binary, "_date_idx on ", Table/binary, " (date DESC, app, \"group\", resource, type);
+        CREATE INDEX ", Table/binary, "_type_idx on ", Table/binary, " (app, \"group\", resource, type, date DESC);
+        CREATE INDEX ", Table/binary, "_target_idx on ", Table/binary, " (target, date DESC, level DESC);
         CREATE INDEX ", Table/binary, "_data_idx on ", Table/binary, " USING gin(data);
         CREATE INDEX ", Table/binary, "_metadata_idx on ", Table/binary, " USING gin(metadata);
         COMMIT;
