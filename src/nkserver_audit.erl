@@ -157,6 +157,7 @@ parse([Audit|Rest], Acc) ->
         '__defaults' => #{
             namespace => <<>>,
             level => 2,
+            span => <<>>,
             reason => <<>>,
             data => #{},
             metadata => #{}

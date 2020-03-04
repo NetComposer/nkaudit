@@ -78,6 +78,7 @@ create_database_query(postgresql, Table) ->
             \"group\" TEXT,
             resource TEXT,
             type TEXT NOT NULL,
+            span TEXT,
             reason TEXT,
             target TEXT,
             data JSONB,
@@ -104,7 +105,7 @@ store(PgSrvId, Table, Audits, _Opts) ->
     Query = [
         <<
             "INSERT INTO ", Table/binary, " ",
-             "(date,app,\"group\",resource,type,reason,target,data,metadata,namespace,level,uid,node,path) "
+             "(date,app,\"group\",resource,type,span,reason,target,data,metadata,namespace,level,uid,node,path) "
             "VALUES ">>, nklib_util:bjoin(Values), <<";">>
     ],
     case query(PgSrvId, Query) of
@@ -194,7 +195,7 @@ query(SrvId, Query, QueryMeta) ->
             <<Tag0:4000/binary, _/binary>> = QueryBin,
             <<Tag0/binary, "...">>
     end,
-    nkserver_trace:event(query, "~s", Tag, #{}),
+    nkserver_trace:event(query, "~s", [Tag], #{}),
     nkpgsql:query(SrvId, QueryBin, QueryMeta).
 
 %% @private
@@ -210,6 +211,7 @@ update_values([Audit|Rest], Acc) ->
         namespace := Namespace,
         type := Type,
         level := Level,
+        span := Span,
         reason := Reason,
         data := Data,
         metadata := Meta
@@ -224,6 +226,7 @@ update_values([Audit|Rest], Acc) ->
         quote(Group),
         quote(Res),
         quote(Type),
+        quote(Span),
         quote(Reason),
         quote(Target),
         quote(Data),
@@ -254,7 +257,7 @@ pgsql_audits(Result, Meta) ->
     end,
     Actors = lists:map(
         fun
-            ({Date, App, Group, Res, Type, Reason, Target, Ns, Level, UID, Node}) ->
+            ({Date, App, Group, Res, Type, Span, Reason, Target, Ns, Level, UID, Node}) ->
                 #{
                     uid => UID,
                     node => Node,
@@ -264,11 +267,12 @@ pgsql_audits(Result, Meta) ->
                     group => Group,
                     resource => Res,
                     type => Type,
+                    span => Span,
                     target => Target,
                     level => Level,
                     reason => Reason
                 };
-            ({Date, App, Group, Res, Type, Reason, Target, Ns, Level, UID, Node, {jsonb, Data}, {jsonb, MetaD}}) ->
+            ({Date, App, Group, Res, Type, Span, Reason, Target, Ns, Level, UID, Node, {jsonb, Data}, {jsonb, MetaD}}) ->
 
                 #{
                     uid => UID,
@@ -279,6 +283,7 @@ pgsql_audits(Result, Meta) ->
                     group => Group,
                     resource => Res,
                     type => Type,
+                    span => Span,
                     target => Target,
                     level => Level,
                     reason => Reason,

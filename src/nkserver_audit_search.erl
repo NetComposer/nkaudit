@@ -245,6 +245,7 @@ field_name(<<"app">>) -> ok;
 field_name(<<"group">>) -> ok;
 field_name(<<"resource">>) -> ok;
 field_name(<<"type">>) -> ok;
+field_name(<<"span">>) -> ok;
 field_name(<<"target">>) -> ok;
 field_name(<<"level">>) -> ok;
 field_name(<<"node">>) -> ok;
