@@ -45,16 +45,12 @@
         group => binary(),
         resource => binary(),
         type => binary(),               % Mandatory
+        span => binary(),
         target => binary(),
         level => 1..7 | level(),        % Default 2
         reason => binary(),             % Default ""
         data => map(),
-        metadata => #{
-            count => integer(),
-            first_date => binary(),
-            trace_id => binary(),
-            tags => [{binary(), binary()}]
-        }
+        metadata => map()
 }.
 
 -type store_opts() :: #{}.
@@ -151,6 +147,7 @@ parse([Audit|Rest], Acc) ->
         group => [{atom, [null]}, binary],
         resource => [{atom, [null]}, binary],
         type => binary,
+        span => binary,
         target => [{atom, [null]}, binary],
         level => [{integer, 1, 7}, {atom, [debug,trace,info,event,notice,warning,error]}],
         reason => binary,

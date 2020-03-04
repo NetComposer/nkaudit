@@ -194,7 +194,7 @@ query(SrvId, Query, QueryMeta) ->
             <<Tag0:4000/binary, _/binary>> = QueryBin,
             <<Tag0/binary, "...">>
     end,
-    nkserver_trace:tags(#{<<"query.sql">>=>Tag}),
+    nkserver_trace:event(query, "~s", Tag, #{}),
     nkpgsql:query(SrvId, QueryBin, QueryMeta).
 
 %% @private
