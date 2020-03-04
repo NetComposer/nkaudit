@@ -31,7 +31,7 @@
 
 -include_lib("nkserver/include/nkserver.hrl").
 
--define(BATCH, 100).
+-define(BATCH, 1000).
 
 %% ===================================================================
 %% Public
