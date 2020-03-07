@@ -108,5 +108,5 @@ reply(Other) ->
 new_span(SrvId, PgSrvId, Op, Fun) ->
     Opts = #{pgsql_app => PgSrvId },
     Fun2 = fun() -> reply(Fun()) end,
-    nkserver_trace:new_span(SrvId, {nkactor_store_pgsql, Op}, Fun2, Opts).
+    nkserver_trace:new_span(SrvId, {trace_nkserver_audit_pgsql, Op}, Fun2, Opts).
 
