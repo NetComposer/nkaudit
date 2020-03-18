@@ -93,6 +93,7 @@ create_database_query(postgresql, Table) ->
         CREATE INDEX ", Table/binary, "_date_idx on ", Table/binary, " (date DESC, app, \"group\", resource, type);
         CREATE INDEX ", Table/binary, "_type_idx on ", Table/binary, " (app, \"group\", resource, type, date DESC);
         CREATE INDEX ", Table/binary, "_target_idx on ", Table/binary, " (target, date DESC, level DESC);
+        CREATE INDEX ", Table/binary, "_span_idx on ", Table/binary, " (span, date DESC, level DESC);
         CREATE INDEX ", Table/binary, "_data_idx on ", Table/binary, " USING gin(data);
         CREATE INDEX ", Table/binary, "_metadata_idx on ", Table/binary, " USING gin(metadata);
         COMMIT;
