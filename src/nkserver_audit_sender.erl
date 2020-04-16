@@ -123,11 +123,11 @@ handle_info(send_audits, #state{audits=[], interval=Time}=State) ->
     erlang:send_after(Time, self(), send_audits),
     {noreply, State};
 
-handle_info(send_audits, #state{interval=Time, total=Total}=State) ->
+handle_info(send_audits, #state{srv=SrvId, interval=Time, total=Total}=State) ->
     State2 = case nklib_util:do_config_get(nkserver_audit_pause_sender, false) of
         true ->
             {message_queue_len, Len} = process_info(self(), message_queue_len),
-            lager:error("NKLOG SKIPING SENDING SPANS ~p (~p)", [Len, Total]),
+            lager:notice("Skipping sending ~p spans (~s) (waiting: ~p)", [Total, SrvId, Len]),
             State#state{audits = [], total = 0};
         _ ->
             do_send_audits(State)
