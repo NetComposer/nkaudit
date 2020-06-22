@@ -23,7 +23,7 @@
 -module(nkserver_audit_pgsql_sql).
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
 -export([select/2, filters/1, sort/1, field_name/2]).
--import(nkactor_store_pgsql, [quote/1, filter_path/2]).
+-import(nkactor_store_pgsql, [quote/1, filter_path/1]).
 
 
 %% ===================================================================
@@ -52,7 +52,7 @@ select(Table, Params) ->
 
 
 %% @private
-filters(#{namespace:=Namespace}=Params) ->
+filters(Params) ->
     Flavor = maps:get(flavor, Params, #{}),
     Filters = maps:get(filter, Params, #{}),
     AndFilters1 = expand_filter(maps:get('and', Filters, []), []),
@@ -74,8 +74,7 @@ filters(#{namespace:=Namespace}=Params) ->
         _ ->
             [<<"(NOT ", F/binary, ")">> || F <- NotFilters2]
     end,
-    Deep = maps:get(deep, Params, false),
-    PathFilter = list_to_binary(filter_path(Namespace, Deep)),
+    PathFilter = list_to_binary(filter_path(Params)),
     FilterList = [PathFilter | AndFilters2 ++ OrFilters4 ++ NotFilters3],
     Where = nklib_util:bjoin(FilterList, <<" AND ">>),
     [<<" WHERE ">>, Where].
