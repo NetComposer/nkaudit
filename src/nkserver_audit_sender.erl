@@ -28,6 +28,7 @@
 -export([init/1, terminate/2, code_change/3, handle_call/3, handle_cast/2,
     handle_info/2]).
 -export([split/2]).
+-export([v/0]).
 
 -include_lib("nkserver/include/nkserver.hrl").
 
@@ -36,6 +37,8 @@
 %% ===================================================================
 %% Public
 %% ===================================================================
+
+v() -> 0.
 
 %% @doc
 start_link(SrvId) ->
