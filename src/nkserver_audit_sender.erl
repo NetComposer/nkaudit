@@ -180,7 +180,8 @@ send_audits(#state{srv=SrvId, audits=Audits, total=Total}=State) ->
     case nklib_util:do_config_get(nkserver_audit_pause_sender, false) of
         true ->
             {message_queue_len, Len} = process_info(self(), message_queue_len),
-            lager:notice("Skipping sending ~p spans (~s) (waiting: ~p)", [Total, SrvId, Len]);
+            lager:notice("Skipping sending ~p spans (~s) (waiting: ~p)", [Total, SrvId, Len]),
+            gen_server:cast(self(), hibernate);
         _ ->
             do_send_audits(SrvId, Audits, Total)
     end,
