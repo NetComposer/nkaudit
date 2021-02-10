@@ -114,12 +114,12 @@ handle_call(Msg, _From, State) ->
 
 %% @private
 handle_cast({new_audit, Audit}, #state{audits=Audits, total=Total}=State) ->
-    State = State#state{audits=[Audit|Audits], total=Total+1},
+    State2 = State#state{audits=[Audit|Audits], total=Total+1},
     case Total >= ?BATCH of
         true ->
-            {noreply, send_audits(State)};
+            {noreply, send_audits(State2)};
         false ->
-            {noreply, State}
+            {noreply, State2}
     end;
 
 handle_cast(Msg, State) ->
