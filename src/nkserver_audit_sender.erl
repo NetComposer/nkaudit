@@ -23,7 +23,7 @@
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
 -behaviour(gen_server).
 
--export([store/2, do_store/2, pause/1, get_total/1]).
+-export([store/2, do_store/2, pause/1, get_total/1, get_pid/1]).
 -export([start_link/1]).
 -export([init/1, terminate/2, code_change/3, handle_call/3, handle_cast/2,
     handle_info/2]).
@@ -38,7 +38,7 @@
 %% Public
 %% ===================================================================
 
-v() -> 0.
+v() -> 1.
 
 %% @doc
 start_link(SrvId) ->
@@ -57,7 +57,7 @@ store(SrvId, Audit) when is_map(Audit) ->
 
 %% @doc
 do_store(SrvId, Audit) when is_map(Audit) ->
-    case nklib_util:do_config_get({?MODULE, SrvId}, undefined) of
+    case get_pid(SrvId) of
         Pid when is_pid(Pid) ->
             gen_server:cast(Pid, {new_audit, Audit});
         _ ->
@@ -67,11 +67,28 @@ do_store(SrvId, Audit) when is_map(Audit) ->
 
 %% @doc
 get_total(SrvId) ->
-    case nklib_util:do_config_get({?MODULE, SrvId}, undefined) of
+    case get_pid(SrvId) of
         Pid when is_pid(Pid) ->
             gen_server:call(Pid, get_total);
         _ ->
             {error, audit_not_started}
+    end.
+
+
+%% @doc
+get_pid(SrvId) ->
+    case nklib_util:do_config_get({?MODULE, SrvId}, undefined) of
+        Pid when is_pid(Pid) -> Pid;
+        _ -> undefined
+    end.
+
+
+hibernate(SrvId) ->
+    case get_pid(SrvId) of
+        Pid when is_pid(Pid) ->
+            gen_server:cast(Pid, hibernate);
+        _ ->
+            ok
     end.
 
 
@@ -121,6 +138,9 @@ handle_cast({new_audit, Audit}, #state{audits=Audits, total=Total}=State) ->
         false ->
             {noreply, State2}
     end;
+
+handle_cast(hibernate, State) ->
+    {noreply, State, hibernate};
 
 handle_cast(Msg, State) ->
     lager:error("Received unexpected call at ~p: ~p", [?MODULE, Msg]),
