@@ -111,7 +111,13 @@ handle_call(Msg, _From, State) ->
 
 %% @private
 handle_cast({new_audit, Audit}, #state{audits=Audits, total=Total}=State) ->
-    {noreply, State#state{audits=[Audit|Audits], total=Total+1}};
+    State = State#state{audits=[Audit|Audits], total=Total+1},
+    case Total >= ?BATCH of
+        true ->
+            {noreply, send_audits(State)};
+        false ->
+            {noreply, State}
+    end;
 
 handle_cast(Msg, State) ->
     lager:error("Received unexpected call at ~p: ~p", [?MODULE, Msg]),
@@ -119,19 +125,8 @@ handle_cast(Msg, State) ->
 
 
 %% @private
-handle_info(send_audits, #state{audits=[], interval=Time}=State) ->
-    erlang:send_after(Time, self(), send_audits),
-    {noreply, State};
-
-handle_info(send_audits, #state{srv=SrvId, interval=Time, total=Total}=State) ->
-    State2 = case nklib_util:do_config_get(nkserver_audit_pause_sender, false) of
-        true ->
-            {message_queue_len, Len} = process_info(self(), message_queue_len),
-            lager:notice("Skipping sending ~p spans (~s) (waiting: ~p)", [Total, SrvId, Len]),
-            State#state{audits = [], total = 0};
-        _ ->
-            do_send_audits(State)
-    end,
+handle_info(send_audits, #state{interval=Time}=State) ->
+    State2 = send_audits(State),
     erlang:send_after(Time, self(), send_audits),
     {noreply, State2};
 
@@ -155,18 +150,18 @@ terminate(_Reason, _State) ->
 %% Internal
 %% ===================================================================
 
+send_audits(#state{audits=[]}=State) ->
+    State;
 
-%% @private
-do_send_audits(#state{srv=SrvId, audits=Audits, total=Total}=State) ->
-    case Total > ?BATCH of
+send_audits(#state{srv=SrvId, audits=Audits, total=Total}=State) ->
+    case nklib_util:do_config_get(nkserver_audit_pause_sender, false) of
         true ->
-            {Audits2, Rest} = split(Audits, ?BATCH),
-            do_send_audits(SrvId, Audits2, Total),
-            do_send_audits(State#state{audits=Rest, total=Total-?BATCH});
-        false ->
-            do_send_audits(SrvId, Audits, Total),
-            State#state{audits=[], total=0}
-    end.
+            {message_queue_len, Len} = process_info(self(), message_queue_len),
+            lager:notice("Skipping sending ~p spans (~s) (waiting: ~p)", [Total, SrvId, Len]);
+        _ ->
+            do_send_audits(SrvId, Audits, Total)
+    end,
+    State#state{audits = [], total = 0}.
 
 
 %% @private
