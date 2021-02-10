@@ -23,7 +23,7 @@
 -author('Carlos Gonzalez <carlosj.gf@gmail.com>').
 -behaviour(gen_server).
 
--export([store/2, do_store/2, pause/1, get_total/1, get_pid/1]).
+-export([store/2, do_store/2, pause/1, get_total/1, get_pid/1, hibernate/1]).
 -export([start_link/1]).
 -export([init/1, terminate/2, code_change/3, handle_call/3, handle_cast/2,
     handle_info/2]).
